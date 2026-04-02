@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Trình xem mô hình 3D khuôn viên THPT Lê Hồng Phong với Three.js."
+    />
+    <title>THPT Lê Hồng Phong 3D Viewer</title>
+  </head>
+  <body>
+    <div id="app">
+      <main class="viewer-shell">
+        <section
+          id="viewer-stage"
+          class="viewer-stage"
+          aria-label="Trình xem mô hình 3D THPT Lê Hồng Phong"
+        >
+          <canvas
+            id="viewer-canvas"
+            aria-label="Canvas hiển thị mô hình 3D trường THPT Lê Hồng Phong"
+          ></canvas>
+
+          <div class="viewer-overlay">
+            <section class="panel hero-card" aria-live="polite">
+              <p class="eyebrow">Three.js Campus Viewer</p>
+              <h1 id="school-title"></h1>
+              <p id="school-subtitle" class="hero-copy"></p>
+            </section>
+
+            <div class="overlay-bottom">
+              <section class="panel hints-card">
+                <p class="panel-title">Cách tương tác</p>
+                <ul id="instruction-list" class="hints-list"></ul>
+              </section>
+
+              <section class="panel controls-card" aria-live="polite">
+                <div class="status-line">
+                  <p class="panel-title" id="status-label"></p>
+                  <span id="progress-value" class="status-value">0%</span>
+                </div>
+
+                <div id="progress-shell" class="progress-shell">
+                  <div
+                    class="progress-track"
+                    role="progressbar"
+                    aria-label="Tiến trình tải mô hình"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                  >
+                    <div id="progress-fill" class="progress-fill"></div>
+                  </div>
+                </div>
+
+                <p id="status-message" class="status-message"></p>
+                <p id="error-banner" class="error-banner" hidden></p>
+
+                <div class="button-row">
+                  <button id="reset-view-button" class="action-button" type="button"></button>
+                  <button
+                    id="toggle-auto-rotate-button"
+                    class="action-button action-button--ghost"
+                    type="button"
+                  ></button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+  </html>
+

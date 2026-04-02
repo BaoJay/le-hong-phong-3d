@@ -1,0 +1,25 @@
+{
+  "name": "le-hong-phong-3d-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "sync:draco": "node scripts/sync-draco.mjs",
+    "generate:placeholder-model": "node scripts/generate-placeholder-model.mjs",
+    "postinstall": "npm run sync:draco && npm run generate:placeholder-model"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "three": "^0.179.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
+  }
+}
+
