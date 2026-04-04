@@ -26,19 +26,46 @@
           ></canvas>
 
           <div class="viewer-overlay">
-            <section class="panel hero-card" aria-live="polite">
-              <p class="eyebrow">Three.js Campus Viewer</p>
-              <h1 id="school-title"></h1>
-              <p id="school-subtitle" class="hero-copy"></p>
-            </section>
+            <header class="panel topbar">
+              <div class="brand-lockup">
+                <p class="brand-kicker" id="school-subtitle"></p>
+                <p class="brand-name" id="school-title"></p>
+              </div>
 
-            <div class="overlay-bottom">
+              <nav class="topnav" aria-label="Điều hướng giao diện">
+                <a class="nav-link" href="#heritage">Di sản</a>
+                <a class="nav-link" href="#viewer-details">Khám phá</a>
+                <a class="nav-link" href="#controls">Điều khiển</a>
+              </nav>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 1rem;
+                "
+              >
+                <p
+                  id="reset-view-button"
+                  class="topbar-badge"
+                  type="button"
+                ></p>
+                <p class="topbar-badge">Est. 1927 · Saigon</p>
+              </div>
+            </header>
+
+            <div class="overlay-grid">
               <section class="panel hints-card">
                 <p class="panel-title">Cách tương tác</p>
                 <ul id="instruction-list" class="hints-list"></ul>
               </section>
 
-              <section class="panel controls-card" aria-live="polite">
+              <section
+                id="controls"
+                class="panel controls-card"
+                aria-live="polite"
+              >
                 <div class="status-line">
                   <p class="panel-title" id="status-label"></p>
                   <span id="progress-value" class="status-value">0%</span>
@@ -61,7 +88,6 @@
                 <p id="error-banner" class="error-banner" hidden></p>
 
                 <div class="button-row">
-                  <button id="reset-view-button" class="action-button" type="button"></button>
                   <button
                     id="toggle-auto-rotate-button"
                     class="action-button action-button--ghost"
@@ -77,5 +103,4 @@
 
     <script type="module" src="/src/main.ts"></script>
   </body>
-  </html>
-
+</html>
