@@ -18,14 +18,19 @@ import {
   SRGBColorSpace,
   Vector2,
   Vector3,
-  WebGLRenderer
-} from 'three';
-import type { Intersection, Material } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { LoadingProgress, ViewerApi, ViewerConfig, ViewerStatus } from './types';
+  WebGLRenderer,
+} from "three";
+import type { Intersection, Material } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type {
+  LoadingProgress,
+  ViewerApi,
+  ViewerConfig,
+  ViewerStatus,
+} from "./types";
 
 interface ViewerCallbacks {
   onProgress?: (progress: LoadingProgress) => void;
@@ -46,7 +51,6 @@ interface CreateViewerOptions extends ViewerCallbacks {
   canvas: HTMLCanvasElement;
   config: ViewerConfig;
 }
-
 
 const CAMERA_NEAR_DIVISOR = 120;
 const CAMERA_FAR_MULTIPLIER = 18;
@@ -69,19 +73,19 @@ export function createViewer({
     config.camera.fov,
     1,
     config.camera.near,
-    config.camera.far
+    config.camera.far,
   );
 
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: true
+    alpha: true,
   });
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = config.model.enableShadows;
   renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(new Color('#000000'), 0);
+  renderer.setClearColor(new Color("#000000"), 0);
 
   const controls = new OrbitControls(camera, canvas);
   controls.enablePan = config.controls.enablePan;
@@ -94,15 +98,18 @@ export function createViewer({
   controls.maxDistance = 400;
   controls.target.set(0, 0, 0);
 
-  const ambientLight = new AmbientLight('#ffffff', config.scene.lights.ambientIntensity);
+  const ambientLight = new AmbientLight(
+    "#ffffff",
+    config.scene.lights.ambientIntensity,
+  );
   const hemisphereLight = new HemisphereLight(
-    '#fff4d2',
+    "#fff4d2",
     config.scene.groundColor,
-    config.scene.lights.hemisphereIntensity
+    config.scene.lights.hemisphereIntensity,
   );
   const directionalLight = new DirectionalLight(
-    '#fff9ea',
-    config.scene.lights.directionalIntensity
+    "#fff9ea",
+    config.scene.lights.directionalIntensity,
   );
   directionalLight.position.set(...config.scene.lights.directionalPosition);
   directionalLight.castShadow = config.model.enableShadows;
@@ -115,15 +122,20 @@ export function createViewer({
   directionalLight.shadow.camera.top = 35;
   directionalLight.shadow.camera.bottom = -35;
 
-  scene.add(ambientLight, hemisphereLight, directionalLight, directionalLight.target);
+  scene.add(
+    ambientLight,
+    hemisphereLight,
+    directionalLight,
+    directionalLight.target,
+  );
 
   const ground = new Mesh(
     new PlaneGeometry(1, 1),
     new MeshStandardMaterial({
       color: new Color(config.scene.groundColor),
       roughness: 0.95,
-      metalness: 0.02
-    })
+      metalness: 0.02,
+    }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = config.model.enableShadows;
@@ -136,7 +148,10 @@ export function createViewer({
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  interface TrackedLabel { el: HTMLElement; worldPos: Vector3; }
+  interface TrackedLabel {
+    el: HTMLElement;
+    worldPos: Vector3;
+  }
   let trackedLabels: TrackedLabel[] = [];
 
   function updateTrackedLabels() {
@@ -145,21 +160,31 @@ export function createViewer({
     const h = Math.max(mount.clientHeight, 1);
     for (const { el, worldPos } of trackedLabels) {
       const v = worldPos.clone().project(camera);
-      if (v.z > 1) { el.style.visibility = 'hidden'; continue; }
-      el.style.visibility = '';
+      if (v.z > 1) {
+        el.style.visibility = "hidden";
+        continue;
+      }
+      el.style.visibility = "";
       el.style.left = `${(v.x * 0.5 + 0.5) * w}px`;
       el.style.top = `${(-v.y * 0.5 + 0.5) * h}px`;
     }
   }
 
-  function setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]) {
-    trackedLabels = defs.map(({ el, pos }) => ({ el, worldPos: new Vector3(...pos) }));
+  function setLabels(
+    defs: { el: HTMLElement; pos: [number, number, number] }[],
+  ) {
+    trackedLabels = defs.map(({ el, pos }) => ({
+      el,
+      worldPos: new Vector3(...pos),
+    }));
   }
 
   // ── Camera focus animation ───────────────────────────────────────────────
   interface CamAnim {
-    startPos: Vector3; endPos: Vector3;
-    startTarget: Vector3; endTarget: Vector3;
+    startPos: Vector3;
+    endPos: Vector3;
+    startTarget: Vector3;
+    endTarget: Vector3;
     progress: number;
     onComplete?: () => void;
   }
@@ -177,20 +202,27 @@ export function createViewer({
     };
   }
 
-  function focusOnPoint(centerArr: [number, number, number], panelWidthFraction = 0) {
+  function focusOnPoint(
+    centerArr: [number, number, number],
+    panelWidthFraction = 0,
+  ) {
     const target = new Vector3(...centerArr);
     // Use the animation destination if mid-flight, so direction/distance are consistent.
     const refPos = camAnim ? camAnim.endPos : camera.position;
     const refTarget = camAnim ? camAnim.endTarget : controls.target;
     const dir = new Vector3().subVectors(refPos, refTarget).normalize();
-    const newDist = Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2);
+    const newDist = Math.max(
+      refPos.distanceTo(refTarget) * 0.38,
+      controls.minDistance * 2,
+    );
 
     // Shift target rightward so the building stays centered in the viewport
     // area left of the info panel (panelWidthFraction = panel px / viewport px).
     if (panelWidthFraction > 0) {
       const lookDir = dir.clone().negate();
       const right = new Vector3().crossVectors(lookDir, camera.up).normalize();
-      const halfWidthWorld = Math.tan(MathUtils.degToRad(camera.fov / 2)) * newDist * camera.aspect;
+      const halfWidthWorld =
+        Math.tan(MathUtils.degToRad(camera.fov / 2)) * newDist * camera.aspect;
       target.addScaledVector(right, halfWidthWorld * panelWidthFraction);
     }
 
@@ -210,12 +242,12 @@ export function createViewer({
   let pointerDownX = 0;
   let pointerDownY = 0;
 
-  canvas.addEventListener('pointerdown', (e) => {
+  canvas.addEventListener("pointerdown", (e) => {
     pointerDownX = e.clientX;
     pointerDownY = e.clientY;
   });
 
-  canvas.addEventListener('pointerup', (e) => {
+  canvas.addEventListener("pointerup", (e) => {
     const dx = e.clientX - pointerDownX;
     const dy = e.clientY - pointerDownY;
     if (Math.sqrt(dx * dx + dy * dy) > 5 || !onObjectClick) return;
@@ -276,7 +308,7 @@ export function createViewer({
   renderer.setAnimationLoop(animate);
   resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(mount);
-  window.addEventListener('resize', resize);
+  window.addEventListener("resize", resize);
   resize();
 
   const stopAutoRotateOnInteract = () => {
@@ -287,7 +319,7 @@ export function createViewer({
     setAutoRotate(false);
   };
 
-  controls.addEventListener('start', stopAutoRotateOnInteract);
+  controls.addEventListener("start", stopAutoRotateOnInteract);
 
   function setStatus(status: ViewerStatus) {
     onStatusChange?.(status);
@@ -312,11 +344,11 @@ export function createViewer({
   }
 
   async function loadModel() {
-    setStatus('loading');
+    setStatus("loading");
     onProgress?.({
       loaded: 0,
       total: 0,
-      progress: 0
+      progress: 0,
     });
 
     try {
@@ -334,7 +366,7 @@ export function createViewer({
       }
 
       modelRoot = gltf.scene;
-      modelRoot.name = 'LeHongPhongCampus';
+      modelRoot.name = "LeHongPhongCampus";
 
       applyModelTransform(modelRoot, config);
       applyShadowSettings(modelRoot, config.model.enableShadows);
@@ -344,7 +376,7 @@ export function createViewer({
       const bounds = new Box3().setFromObject(modelRoot);
 
       if (bounds.isEmpty()) {
-        throw new Error('Model loaded but did not contain visible geometry.');
+        throw new Error("Model loaded but did not contain visible geometry.");
       }
 
       fitCameraToBounds(bounds);
@@ -353,12 +385,12 @@ export function createViewer({
       onProgress?.({
         loaded: 1,
         total: 1,
-        progress: 1
+        progress: 1,
       });
-      setStatus('ready');
+      setStatus("ready");
     } catch (error) {
       const message = mapViewerError(error, config);
-      setStatus('error');
+      setStatus("error");
       onError?.(message);
       throw error;
     }
@@ -390,7 +422,7 @@ export function createViewer({
 
     initialViewState = {
       position: nextPosition.clone(),
-      target: center.clone()
+      target: center.clone(),
     };
 
     directionalLight.target.position.copy(center);
@@ -409,7 +441,7 @@ export function createViewer({
 
     const center = bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
-    const diameter = Math.max(size.x, size.z) * 2.3;
+    const diameter = Math.max(size.x, size.z) * 1.2;
 
     ground.scale.setScalar(Math.max(diameter, 12));
     ground.position.set(center.x, bounds.min.y - 0.02, center.z);
@@ -444,8 +476,8 @@ export function createViewer({
     renderer.setAnimationLoop(null);
     resizeObserver?.disconnect();
     resizeObserver = null;
-    window.removeEventListener('resize', resize);
-    controls.removeEventListener('start', stopAutoRotateOnInteract);
+    window.removeEventListener("resize", resize);
+    controls.removeEventListener("start", stopAutoRotateOnInteract);
     controls.dispose();
 
     if (modelRoot) {
@@ -470,11 +502,11 @@ export function createViewer({
     zoomOut,
     setLabels,
     focusOnPoint,
-    destroy
+    destroy,
   };
 
   function loadGltfWithProgress(
-    handleProgress: (progress: LoadingProgress) => void
+    handleProgress: (progress: LoadingProgress) => void,
   ): Promise<GLTF> {
     return new Promise((resolve, reject) => {
       gltfLoader.load(
@@ -488,10 +520,10 @@ export function createViewer({
           handleProgress({
             loaded,
             total,
-            progress
+            progress,
           });
         },
-        reject
+        reject,
       );
     });
   }
@@ -543,7 +575,7 @@ function mapViewerError(error: unknown, config: ViewerConfig) {
   const rawMessage = error instanceof Error ? error.message : String(error);
   const normalized = rawMessage.toLowerCase();
 
-  if (normalized.includes('draco') || normalized.includes('decoder')) {
+  if (normalized.includes("draco") || normalized.includes("decoder")) {
     return `${config.ui.decoderLoadError} (${rawMessage})`;
   }
 
@@ -553,4 +585,3 @@ function mapViewerError(error: unknown, config: ViewerConfig) {
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
-
