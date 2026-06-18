@@ -1,4 +1,23 @@
-export type ViewerStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type ViewerStatus = "idle" | "loading" | "ready" | "error";
+
+export interface LoadingProgress {
+  loaded: number;
+  total: number;
+  progress: number | null;
+}
+
+export interface ViewerApi {
+  load(): Promise<void>;
+  resetView(): void;
+  resetViewAnimated(): void;
+  setAutoRotate(enabled: boolean): void;
+  isAutoRotateEnabled(): boolean;
+  zoomIn(): void;
+  zoomOut(): void;
+  setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]): void;
+  focusOnPoint(center: [number, number, number], panelWidthFraction?: number): void;
+  destroy(): void;
+}
 
 export interface ViewerMeta {
   title: string;
