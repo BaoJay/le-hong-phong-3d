@@ -8,7 +8,7 @@ export const viewerConfig: ViewerConfig = {
     subtitle: "Dự án kỉ niệm 100 năm LHP",
   },
   model: {
-    src: `${baseUrl}models/le-hong-phong-campus-placeholder.glb`,
+    src: `${baseUrl}models/LHP100_20260607_pk.glb`,
     fitPadding: 1.45,
     initialRotation: [0, Math.PI * 0.08, 0],
     initialScale: 1,
