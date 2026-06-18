@@ -457,12 +457,11 @@ export function createViewer({
       return;
     }
 
-    const center = bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
     const diameter = Math.max(size.x, size.z) * 1.2;
 
     ground.scale.setScalar(Math.max(diameter, 12));
-    ground.position.set(center.x, bounds.min.y - 0.02, center.z);
+    ground.position.set(0, bounds.min.y - 0.02, 0);
   }
 
   function zoomIn() {
