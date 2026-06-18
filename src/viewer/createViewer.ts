@@ -1,5 +1,6 @@
 import {
   AmbientLight,
+  AxesHelper,
   Box3,
   Color,
   DirectionalLight,
@@ -54,6 +55,12 @@ interface CreateViewerOptions extends ViewerCallbacks {
 
 const CAMERA_NEAR_DIVISOR = 120;
 const CAMERA_FAR_MULTIPLIER = 18;
+const DEFAULT_DEBUG_AXES_SIZE = 20;
+const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
+  "#2f72ff",
+  "#2fbf5b",
+  "#ff2f2f",
+];
 
 export function createViewer({
   mount,
@@ -128,6 +135,17 @@ export function createViewer({
     directionalLight,
     directionalLight.target,
   );
+
+  const worldAxes = new AxesHelper(
+    config.debug?.worldAxesSize ?? DEFAULT_DEBUG_AXES_SIZE,
+  );
+  worldAxes.name = "DebugWorldAxes";
+  worldAxes.setColors(
+    ...(config.debug?.worldAxesColors ?? DEFAULT_DEBUG_AXES_COLORS),
+  );
+  worldAxes.position.set(...(config.debug?.worldAxesPosition ?? [0, 0, 0]));
+  worldAxes.visible = config.debug?.showWorldAxes ?? false;
+  scene.add(worldAxes);
 
   const ground = new Mesh(
     new PlaneGeometry(1, 1),

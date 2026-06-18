@@ -73,6 +73,13 @@ export interface ViewerControlsConfig {
   stopAutoRotateOnInteract: boolean;
 }
 
+export interface ViewerDebugConfig {
+  showWorldAxes: boolean;
+  worldAxesSize: number;
+  worldAxesPosition: [number, number, number];
+  worldAxesColors: [string, string, string];
+}
+
 export interface UiTextConfig {
   instructions: string[];
   loadingStatus: string;
@@ -95,6 +102,6 @@ export interface ViewerConfig {
   scene: ViewerSceneConfig;
   camera: ViewerCameraConfig;
   controls: ViewerControlsConfig;
+  debug?: ViewerDebugConfig;
   ui: UiTextConfig;
 }
-

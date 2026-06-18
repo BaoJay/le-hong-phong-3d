@@ -47,6 +47,12 @@ export const viewerConfig: ViewerConfig = {
     dampingFactor: 0.06,
     stopAutoRotateOnInteract: true,
   },
+  debug: {
+    showWorldAxes: true,
+    worldAxesSize: 40,
+    worldAxesPosition: [0, 0, 0],
+    worldAxesColors: ["#2f72ff", "#2fbf5b", "#ff2f2f"],
+  },
   ui: {
     instructions: [
       "Kéo chuột hoặc chạm để xoay góc nhìn quanh toàn bộ khuôn viên.",
