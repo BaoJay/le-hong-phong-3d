@@ -416,6 +416,7 @@ export function createViewer({
 
   function fitCameraToBounds(bounds: Box3) {
     const center = bounds.getCenter(new Vector3());
+    const orbitTarget = new Vector3(0, 0, 0);
     const size = bounds.getSize(new Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
     const radius = maxDimension / 2;
@@ -426,21 +427,21 @@ export function createViewer({
     const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
 
     const fitDirection = new Vector3(...config.camera.fitDirection).normalize();
-    const nextPosition = fitDirection.multiplyScalar(distance).add(center);
+    const nextPosition = fitDirection.multiplyScalar(distance).add(orbitTarget);
 
     camera.position.copy(nextPosition);
     camera.near = Math.max(distance / CAMERA_NEAR_DIVISOR, 0.01);
     camera.far = Math.max(distance * CAMERA_FAR_MULTIPLIER, config.camera.far);
     camera.updateProjectionMatrix();
 
-    controls.target.copy(center);
+    controls.target.copy(orbitTarget);
     controls.minDistance = Math.max(radius * 0.45, 0.5);
     controls.maxDistance = Math.max(radius * 8, 20);
     controls.update();
 
     initialViewState = {
       position: nextPosition.clone(),
-      target: center.clone(),
+      target: orbitTarget.clone(),
     };
 
     directionalLight.target.position.copy(center);

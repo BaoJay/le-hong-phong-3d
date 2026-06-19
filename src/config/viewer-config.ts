@@ -10,7 +10,7 @@ export const viewerConfig: ViewerConfig = {
   model: {
     src: `${baseUrl}models/LHP100_20260607_pk.glb`,
     fitPadding: 1.45,
-    initialRotation: [0, Math.PI * 0.08, 0],
+    initialRotation: [0, 0, 0],
     initialScale: 1,
     enableGround: true,
     enableShadows: true,
