@@ -24,7 +24,7 @@ export const BUILDINGS: readonly Building[] = [
     ],
     center: [47, 0, -45],
     labelId: "label-khu-a",
-    labelPos: [47, 0, -45],
+    labelPos: [47, 8, -45],
   },
   {
     id: "khu-b",
@@ -56,7 +56,7 @@ export const BUILDINGS: readonly Building[] = [
     ],
     center: [0, 5, -150],
     labelId: "label-khu-c",
-    labelPos: [0, 5, -150],
+    labelPos: [0, 15, -150],
   },
   {
     id: "khu-d",
@@ -72,7 +72,7 @@ export const BUILDINGS: readonly Building[] = [
     ],
     center: [47, 0, -120],
     labelId: "label-khu-d",
-    labelPos: [47, 0, -120],
+    labelPos: [47, 12, -120],
   },
   {
     id: "khu-nha-thi-dau",
