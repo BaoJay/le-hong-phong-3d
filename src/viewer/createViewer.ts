@@ -425,7 +425,6 @@ export function createViewer({
   }
 
   function fitCameraToBounds(bounds: Box3) {
-    const center = bounds.getCenter(new Vector3());
     // Set trục orbit về trục xyz 0;0;0 của world space
     // [50, 0, -80] là tâm điểm sân trường khu A
     const orbitTarget = new Vector3(50, 0, -80);
