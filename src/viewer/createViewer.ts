@@ -61,6 +61,9 @@ const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
   "#2fbf5b",
   "#ff2f2f",
 ];
+const DEFAULT_SHADOW_MAP_SIZE = 4096;
+const MIN_SUN_DISTANCE = 20;
+const MIN_SHADOW_EXTENT = 25;
 
 export function createViewer({
   mount,
@@ -118,16 +121,22 @@ export function createViewer({
     "#fff9ea",
     config.scene.lights.directionalIntensity,
   );
-  directionalLight.position.set(...config.scene.lights.directionalPosition);
+  directionalLight.position
+    .copy(sketchUpSunDirectionToThree(config.scene.lights.sketchUpSunDirection))
+    .multiplyScalar(MIN_SUN_DISTANCE);
   directionalLight.castShadow = config.model.enableShadows;
-  directionalLight.shadow.mapSize.set(2048, 2048);
+  directionalLight.shadow.mapSize.set(
+    DEFAULT_SHADOW_MAP_SIZE,
+    DEFAULT_SHADOW_MAP_SIZE,
+  );
   directionalLight.shadow.bias = -0.00008;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 80;
-  directionalLight.shadow.camera.left = -35;
-  directionalLight.shadow.camera.right = 35;
-  directionalLight.shadow.camera.top = 35;
-  directionalLight.shadow.camera.bottom = -35;
+  directionalLight.shadow.normalBias = 0.015;
+  directionalLight.shadow.camera.near = 0.1;
+  directionalLight.shadow.camera.far = 100;
+  directionalLight.shadow.camera.left = -MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.right = MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.top = MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.bottom = -MIN_SHADOW_EXTENT;
 
   scene.add(
     ambientLight,
@@ -398,6 +407,7 @@ export function createViewer({
       }
 
       fitCameraToBounds(bounds);
+      updateSunLight(bounds);
       updateGround(bounds);
 
       onProgress?.({
@@ -461,13 +471,37 @@ export function createViewer({
       target: orbitTarget.clone(),
     };
 
-    directionalLight.target.position.copy(center);
-    directionalLight.target.updateMatrixWorld();
-
     if (scene.fog) {
       scene.fog.near = Math.max(fitDistance * 0.8, 10);
       scene.fog.far = Math.max(fitDistance * 4.5, 50);
     }
+  }
+
+  function updateSunLight(bounds: Box3) {
+    const center = bounds.getCenter(new Vector3());
+    const size = bounds.getSize(new Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z);
+    const sunDirection = sketchUpSunDirectionToThree(
+      config.scene.lights.sketchUpSunDirection,
+    );
+    const lightDistance = Math.max(maxDimension * 2, MIN_SUN_DISTANCE);
+    const shadowExtent = Math.max(maxDimension * 0.75, MIN_SHADOW_EXTENT);
+    const shadowCamera = directionalLight.shadow.camera;
+
+    directionalLight.position
+      .copy(center)
+      .addScaledVector(sunDirection, lightDistance);
+    directionalLight.target.position.copy(center);
+    directionalLight.target.updateMatrixWorld();
+
+    shadowCamera.near = 0.1;
+    shadowCamera.far = Math.max(lightDistance + maxDimension * 2, 100);
+    shadowCamera.left = -shadowExtent;
+    shadowCamera.right = shadowExtent;
+    shadowCamera.top = shadowExtent;
+    shadowCamera.bottom = -shadowExtent;
+    shadowCamera.updateProjectionMatrix();
+    directionalLight.shadow.needsUpdate = true;
   }
 
   function updateGround(bounds: Box3) {
@@ -583,6 +617,20 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
     child.castShadow = enableShadows;
     child.receiveShadow = enableShadows;
   });
+}
+
+function sketchUpSunDirectionToThree(
+  sketchUpDirection: [number, number, number],
+) {
+  const [x, y, z] = sketchUpDirection;
+  // SketchUp is Z-up; glTF/Three.js is Y-up.
+  const direction = new Vector3(x, z, -y);
+
+  if (direction.lengthSq() === 0) {
+    return new Vector3(0, 1, 0);
+  }
+
+  return direction.normalize();
 }
 
 function disposeObject(root: Object3D) {

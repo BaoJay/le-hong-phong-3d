@@ -28,10 +28,10 @@ export const viewerConfig: ViewerConfig = {
     fogColor: "#efefef",
     groundColor: "#e0e0e0",
     lights: {
-      ambientIntensity: 1.1,
-      hemisphereIntensity: 1.2,
-      directionalIntensity: 1.3,
-      directionalPosition: [14, 18, 12],
+      ambientIntensity: 0.45,
+      hemisphereIntensity: 0.25,
+      directionalIntensity: 2.4,
+      sketchUpSunDirection: [-0.383216, -0.494039, 0.78043],
     },
   },
   camera: {
