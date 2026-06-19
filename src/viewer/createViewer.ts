@@ -426,7 +426,12 @@ export function createViewer({
     const fitWidthDistance = fitHeightDistance / camera.aspect;
     const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
 
+    // Hướng đặt camera ban đầu so với tâm orbit, lấy từ config viewer-config.ts, fitDirection: [1.25, 0.72, 1.4]
+    // .normalize() biến vector này thành vector đơn vị, nên độ lớn không quan trọng, chỉ quan trọng tỉ lệ giữa x/y/z
     const fitDirection = new Vector3(...config.camera.fitDirection).normalize();
+
+    // nextPosition là vị trí camera thực tế trong world space
+    // nextPosition = hướng * khoảng cách + tâm orbit
     const nextPosition = fitDirection.multiplyScalar(distance).add(orbitTarget);
 
     camera.position.copy(nextPosition);
@@ -434,11 +439,13 @@ export function createViewer({
     camera.far = Math.max(distance * CAMERA_FAR_MULTIPLIER, config.camera.far);
     camera.updateProjectionMatrix();
 
+    // Trục orbit thật nằm ở đây
     controls.target.copy(orbitTarget);
     controls.minDistance = Math.max(radius * 0.45, 0.5);
     controls.maxDistance = Math.max(radius * 8, 20);
     controls.update();
 
+    // Lưu trạng thái view ban đầu để reset khi bấm button reset
     initialViewState = {
       position: nextPosition.clone(),
       target: orbitTarget.clone(),
