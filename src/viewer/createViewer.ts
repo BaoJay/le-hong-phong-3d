@@ -416,7 +416,8 @@ export function createViewer({
 
   function fitCameraToBounds(bounds: Box3) {
     const center = bounds.getCenter(new Vector3());
-    const orbitTarget = new Vector3(0, 0, 0);
+    // Set trục orbit về trục xyz 0;0;0 của world space
+    const orbitTarget = new Vector3(50, 0, -80);
     const size = bounds.getSize(new Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
     const radius = maxDimension / 2;
