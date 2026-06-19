@@ -26,6 +26,37 @@
           id="viewer-canvas"
           aria-label="Mô hình 3D khuôn viên trường THPT Chuyên Lê Hồng Phong"
         ></canvas>
+        <div
+          class="viewer-loading"
+          id="viewer-loading"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div class="loading-orbit" aria-hidden="true">
+            <span></span>
+          </div>
+          <div class="loading-copy">
+            <p class="loading-title" id="status-label"></p>
+            <p class="loading-message" id="status-message"></p>
+          </div>
+          <div class="progress-row">
+            <div id="progress-shell" class="progress-shell">
+              <div
+                class="progress-track"
+                role="progressbar"
+                aria-label="Tiến trình tải mô hình"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+            </div>
+            <span id="progress-value" class="progress-value">0%</span>
+          </div>
+          <div id="error-banner" class="loading-error" hidden></div>
+        </div>
       </div>
 
       <!-- Page overlay: nav + hero + hints -->
@@ -279,26 +310,10 @@
         </div>
       </aside>
 
-      <!-- Hidden elements required by main.ts — do not remove -->
+      <!-- Hidden content seeds required by main.ts — do not remove -->
       <div id="school-title" hidden></div>
       <div id="school-subtitle" hidden></div>
       <ul id="instruction-list" hidden></ul>
-      <div id="status-label" hidden></div>
-      <div id="status-message" hidden></div>
-      <span id="progress-value" hidden></span>
-      <div id="progress-shell" hidden>
-        <div
-          class="progress-track"
-          role="progressbar"
-          aria-label="Tiến trình tải mô hình"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="0"
-        >
-          <div id="progress-fill" class="progress-fill"></div>
-        </div>
-      </div>
-      <div id="error-banner" hidden></div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

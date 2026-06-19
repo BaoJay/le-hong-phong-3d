@@ -166,7 +166,7 @@ export function createViewer({
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = config.model.enableShadows;
-  ground.visible = config.model.enableGround;
+  ground.visible = false;
   scene.add(ground);
 
   const dracoLoader = new DRACOLoader();
@@ -521,6 +521,7 @@ export function createViewer({
     // TODO: Tính lại vị trí ground để nó nằm ngay dưới model, thay vì cố định y = -0.02
     // TODO: Replace thành MB tổng thể
     ground.position.set(size.x / 4, bounds.min.y - 0.02, -size.z / 2);
+    ground.visible = config.model.enableGround;
   }
 
   function zoomIn() {

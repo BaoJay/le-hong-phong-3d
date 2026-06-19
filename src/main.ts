@@ -15,6 +15,7 @@ function requireElement<T extends HTMLElement>(id: string): T {
 const app             = requireElement("app");
 const viewerStage     = requireElement("viewer-stage");
 const canvas          = requireElement<HTMLCanvasElement>("viewer-canvas");
+const loadingOverlay  = requireElement("viewer-loading");
 const titleElement    = requireElement("school-title");
 const subtitleElement = requireElement("school-subtitle");
 const instructionList = requireElement<HTMLUListElement>("instruction-list");
@@ -30,10 +31,14 @@ if (!progressTrack) throw new Error("Missing required DOM element: .progress-tra
 
 // ── Initial setup ─────────────────────────────────────────────────────────────
 document.title = `${viewerConfig.meta.title} | 3D Viewer`;
+app.classList.add("is-loading");
 titleElement.textContent = viewerConfig.meta.title;
 subtitleElement.textContent = viewerConfig.meta.subtitle;
 statusLabel.textContent = viewerConfig.ui.loadingStatus;
 statusMessage.textContent = viewerConfig.ui.preparingStatus;
+progressShell.dataset.mode = "determinate";
+progressFill.style.width = "0%";
+progressValue.textContent = "0%";
 
 for (const instruction of viewerConfig.ui.instructions) {
   const li = document.createElement("li");
@@ -106,11 +111,14 @@ const viewer = createViewer({
 
   onProgress({ progress, loaded, total }) {
     statusLabel.textContent = viewerConfig.ui.loadingStatus;
+    progressShell.hidden = false;
+    progressValue.hidden = false;
 
     if (progress === null) {
       progressShell.dataset.mode = "indeterminate";
       progressFill.style.width = "45%";
-      progressValue.textContent = viewerConfig.ui.progressFallback;
+      progressValue.textContent = "...";
+      progressTrack.removeAttribute("aria-valuenow");
       progressTrack.setAttribute("aria-valuetext", viewerConfig.ui.progressFallback);
       statusMessage.textContent = `Đã nhận ${formatFileSize(loaded)} dữ liệu từ model.`;
       return;
@@ -121,25 +129,41 @@ const viewer = createViewer({
     progressFill.style.width = `${percent}%`;
     progressValue.textContent = `${percent}%`;
     progressTrack.setAttribute("aria-valuenow", String(percent));
+    progressTrack.removeAttribute("aria-valuetext");
     statusMessage.textContent = total > 0
       ? `Đã tải ${formatFileSize(loaded)} / ${formatFileSize(total)} dữ liệu.`
       : viewerConfig.ui.preparingStatus;
   },
 
   onStatusChange(status) {
+    if (status === "loading") {
+      app.classList.add("is-loading");
+      app.classList.remove("is-loaded", "is-load-error");
+      loadingOverlay.setAttribute("aria-busy", "true");
+      progressShell.hidden = false;
+      progressValue.hidden = false;
+      errorBanner.hidden = true;
+      return;
+    }
     if (status === "ready") {
+      app.classList.remove("is-loading", "is-load-error");
+      app.classList.add("is-loaded");
+      loadingOverlay.setAttribute("aria-busy", "false");
       statusLabel.textContent = viewerConfig.ui.readyStatus;
       statusMessage.textContent =
         "Dùng các nút điều khiển hoặc thao tác trực tiếp trên mô hình để quan sát bố cục khuôn viên.";
-      progressShell.hidden = true;
       progressValue.textContent = "100%";
       progressFill.style.width = "100%";
       errorBanner.hidden = true;
       return;
     }
     if (status === "error") {
+      app.classList.remove("is-loading", "is-loaded");
+      app.classList.add("is-load-error");
+      loadingOverlay.setAttribute("aria-busy", "false");
       statusLabel.textContent = viewerConfig.ui.errorStatus;
       progressShell.hidden = true;
+      progressValue.hidden = true;
     }
   },
 

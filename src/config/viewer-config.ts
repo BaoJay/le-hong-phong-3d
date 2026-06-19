@@ -48,7 +48,7 @@ export const viewerConfig: ViewerConfig = {
     stopAutoRotateOnInteract: true,
   },
   debug: {
-    showWorldAxes: true,
+    showWorldAxes: false,
     worldAxesSize: 40,
     worldAxesPosition: [0, 0, 0],
     worldAxesColors: ["#ff2f2f", "#2f72ff", "#2fbf5b"],
