@@ -48,7 +48,7 @@ export interface ViewerLights {
   ambientIntensity: number;
   hemisphereIntensity: number;
   directionalIntensity: number;
-  directionalPosition: [number, number, number];
+  sketchUpSunDirection: [number, number, number];
 }
 
 export interface ViewerSceneConfig {

@@ -10,7 +10,7 @@ export const viewerConfig: ViewerConfig = {
   model: {
     src: `${baseUrl}models/LHP100_20260607_pk.glb`,
     fitPadding: 1.45,
-    initialRotation: [0, Math.PI * 0.08, 0],
+    initialRotation: [0, 0, 0],
     initialScale: 1,
     enableGround: true,
     enableShadows: true,
@@ -28,10 +28,10 @@ export const viewerConfig: ViewerConfig = {
     fogColor: "#efefef",
     groundColor: "#e0e0e0",
     lights: {
-      ambientIntensity: 1.1,
-      hemisphereIntensity: 1.2,
-      directionalIntensity: 1.3,
-      directionalPosition: [14, 18, 12],
+      ambientIntensity: 0.45,
+      hemisphereIntensity: 0.25,
+      directionalIntensity: 2.4,
+      sketchUpSunDirection: [-0.383216, -0.494039, 0.78043],
     },
   },
   camera: {
@@ -50,8 +50,8 @@ export const viewerConfig: ViewerConfig = {
   debug: {
     showWorldAxes: true,
     worldAxesSize: 40,
-    worldAxesPosition: [0, 0, 0],
-    worldAxesColors: ["#2f72ff", "#2fbf5b", "#ff2f2f"],
+    worldAxesPosition: [-35, 5, -210],
+    worldAxesColors: ["#ff2f2f", "#2f72ff", "#2fbf5b"],
   },
   ui: {
     instructions: [
