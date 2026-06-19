@@ -15,12 +15,7 @@ body {
 
 body {
   background: #efefef;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  font-family: "Inter", sans-serif;
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -104,7 +99,7 @@ button {
 }
 
 .brand {
-  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-family: "Libertinus Serif Display", system-ui;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -182,9 +177,7 @@ button {
 }
 
 .hero-title {
-  font-family:
-    "Libertinus Serif Display", "Playfair Display", Georgia, "Times New Roman",
-    serif;
+  font-family: "Libertinus Serif Display", system-ui;
   font-size: 60px;
   font-weight: 400;
   line-height: 1;
@@ -537,9 +530,7 @@ button {
 }
 
 .info-panel__title {
-  font-family:
-    "Libertinus Serif Display", "Playfair Display", Georgia, "Times New Roman",
-    serif;
+  font-family: "Libertinus Serif Display", system-ui;
   font-size: clamp(2rem, 4.5vw, 3rem);
   font-weight: 400;
   letter-spacing: -0.03em;
