@@ -40,7 +40,7 @@ export const BUILDINGS: readonly Building[] = [
     ],
     center: [110, 5, -25],
     labelId: "label-khu-b",
-    labelPos: [110, 5, -25],
+    labelPos: [110, 10, -25],
   },
   {
     id: "khu-c",
@@ -73,5 +73,21 @@ export const BUILDINGS: readonly Building[] = [
     center: [47, 0, -120],
     labelId: "label-khu-d",
     labelPos: [47, 0, -120],
+  },
+  {
+    id: "khu-nha-thi-dau",
+    label: "Khu Nhà Thi Đấu",
+    title: "Dãy nhà Nhà Thi Đấu",
+    description:
+      "Khu vực dành cho các hoạt động thể thao và thi đấu, là nơi tổ chức nhiều giải đấu quan trọng của nhà trường.",
+    meta: [
+      { label: "Diện tích", value: "~3.600 m²" },
+      { label: "Chức năng", value: "Sân sinh hoạt" },
+      { label: "Cây xanh", value: "Hơn 40 cây" },
+      { label: "Năm tu sửa", value: "2010" },
+    ],
+    center: [-35, 0, -210],
+    labelId: "label-khu-nha-thi-dau",
+    labelPos: [-35, 20, -210],
   },
 ];

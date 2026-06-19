@@ -276,6 +276,10 @@ button {
   letter-spacing: 0.02em;
   line-height: 1.4;
   white-space: nowrap;
+  background: beige;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 /*
@@ -286,80 +290,78 @@ button {
   Khu B bottom → anchor at top-left → translate(0,      0)
 */
 
-/* Khu A — text top-left, L opens lower-right, anchor at bottom-right */
-.blabel--a .blabel-inner {
+.blabel-inner {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  transform: translate(-100%, -100%);
-}
-.blabel--a .blabel-line {
-  width: 170px;
-  height: 60px;
-  border-left: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-}
-
-/* Khu B — text above, vertical stem down, anchor at bottom */
-.blabel--b .blabel-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   transform: translate(-50%, -100%);
 }
-.blabel--b .blabel-line {
+.blabel-line {
   width: 1px;
-  height: 60px;
-  background: rgba(0, 0, 0, 0.28);
+  height: 100px;
+  background: beige;
   margin-left: 2px;
 }
 
+/* Khu A — text top-left, L opens lower-right, anchor at bottom-right */
+/* .blabel--a .blabel-inner {
+  transform: translate(-100%, -100%);
+} */
+/* .blabel--a .blabel-line {
+  width: 170px;
+  height: 100px;
+  border-left: 1px solid rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+} */
+
+/* Khu B — text above, vertical stem down, anchor at bottom */
+/* .blabel--b .blabel-inner {
+  transform: translate(-50%, -100%);
+} */
+/* .blabel--b .blabel-line {
+  width: 1px;
+  height: 100px;
+  background: beige;
+  margin-left: 2px;
+} */
+
 /* Khu C — text top-right, L opens lower-left, anchor at bottom-left */
-.blabel--c .blabel-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+/* .blabel--c .blabel-inner {
   transform: translate(0, -100%);
-}
-.blabel--c .blabel-line {
+} */
+/* .blabel--c .blabel-line {
   width: 90px;
-  height: 60px;
+  height: 100px;
   border-right: 1px solid rgba(0, 0, 0, 0.28);
   border-bottom: 1px solid rgba(0, 0, 0, 0.28);
   margin-right: 2px;
-}
+} */
 
 /* Khu D — anchor at top-left, L opens lower-right, text beside bottom */
-.blabel--d .blabel-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
+/* .blabel--d .blabel-inner {
   transform: translate(0, 0);
-}
-.blabel--d .blabel-line {
+} */
+/* .blabel--d .blabel-line {
   width: 120px;
-  height: 55px;
+  height: 100px;
   border-left: 1px solid rgba(0, 0, 0, 0.28);
   border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-}
+} */
 .blabel--d .blabel-text {
   margin-left: 0.4rem;
   padding-bottom: 1px;
 }
 
 /* Khu Nhà thi đấu — anchor at top-left, L opens lower-right, text beside bottom */
-.blabel--nha-thi-dau .blabel-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
+/* .blabel--nha-thi-dau .blabel-inner {
   transform: translate(0, 0);
-}
-.blabel--nha-thi-dau .blabel-line {
+} */
+/* .blabel--nha-thi-dau .blabel-line {
   width: 120px;
-  height: 55px;
+  height: 100px;
   border-left: 1px solid rgba(0, 0, 0, 0.28);
   border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-}
+} */
 .blabel--nha-thi-dau .blabel-text {
   margin-left: 0.4rem;
   padding-bottom: 1px;

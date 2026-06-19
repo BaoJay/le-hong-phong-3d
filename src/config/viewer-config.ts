@@ -50,7 +50,7 @@ export const viewerConfig: ViewerConfig = {
   debug: {
     showWorldAxes: true,
     worldAxesSize: 40,
-    worldAxesPosition: [0, 5, -150],
+    worldAxesPosition: [-35, 5, -210],
     worldAxesColors: ["#ff2f2f", "#2f72ff", "#2fbf5b"],
   },
   ui: {
