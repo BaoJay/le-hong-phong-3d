@@ -417,33 +417,37 @@ export function createViewer({
   function fitCameraToBounds(bounds: Box3) {
     const center = bounds.getCenter(new Vector3());
     // Set trục orbit về trục xyz 0;0;0 của world space
+    // [50, 0, -80] là tâm điểm sân trường khu A
     const orbitTarget = new Vector3(50, 0, -80);
     const size = bounds.getSize(new Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
     const radius = maxDimension / 2;
-    const fitOffset = config.model.fitPadding;
+    const fitPadding = config.model.fitPadding;
     const fovInRadians = MathUtils.degToRad(camera.fov);
-    const fitHeightDistance = radius / Math.tan(fovInRadians / 2);
-    const fitWidthDistance = fitHeightDistance / camera.aspect;
-    const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+    const verticalFitDistance = radius / Math.tan(fovInRadians / 2);
+    const horizontalFitDistance = verticalFitDistance / camera.aspect;
+    // fitDistance là khoảng cách từ camera đến tâm orbit, để toàn bộ model nằm trong view
+    const fitDistance = fitPadding * Math.max(verticalFitDistance, horizontalFitDistance);
 
     // Hướng đặt camera ban đầu so với tâm orbit, lấy từ config viewer-config.ts, fitDirection: [1.25, 0.72, 1.4]
     // .normalize() biến vector này thành vector đơn vị, nên độ lớn không quan trọng, chỉ quan trọng tỉ lệ giữa x/y/z
     const fitDirection = new Vector3(...config.camera.fitDirection).normalize();
 
-    // nextPosition là vị trí camera thực tế trong world space
+    // nextPosition là vị trí camera ban đầu, thực tế trong world space
     // nextPosition = hướng * khoảng cách + tâm orbit
-    const nextPosition = fitDirection.multiplyScalar(distance).add(orbitTarget);
+    const nextPosition = fitDirection.multiplyScalar(fitDistance * 0.5).add(orbitTarget);
 
     camera.position.copy(nextPosition);
-    camera.near = Math.max(distance / CAMERA_NEAR_DIVISOR, 0.01);
-    camera.far = Math.max(distance * CAMERA_FAR_MULTIPLIER, config.camera.far);
+    // vật thể gần camera hơn khoảng này sẽ không được render.
+    camera.near = Math.max(fitDistance / CAMERA_NEAR_DIVISOR, 0.01);
+    // vật thể xa camera hơn khoảng này sẽ không được render.
+    camera.far = Math.max(fitDistance * CAMERA_FAR_MULTIPLIER, config.camera.far);
     camera.updateProjectionMatrix();
 
     // Trục orbit thật nằm ở đây
     controls.target.copy(orbitTarget);
-    controls.minDistance = Math.max(radius * 0.45, 0.5);
-    controls.maxDistance = Math.max(radius * 8, 20);
+    controls.minDistance = fitDistance * 0.1;
+    controls.maxDistance = fitDistance;
     controls.update();
 
     // Lưu trạng thái view ban đầu để reset khi bấm button reset
@@ -456,8 +460,8 @@ export function createViewer({
     directionalLight.target.updateMatrixWorld();
 
     if (scene.fog) {
-      scene.fog.near = Math.max(distance * 0.8, 10);
-      scene.fog.far = Math.max(distance * 4.5, 50);
+      scene.fog.near = Math.max(fitDistance * 0.8, 10);
+      scene.fog.far = Math.max(fitDistance * 4.5, 50);
     }
   }
 
