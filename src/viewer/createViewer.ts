@@ -13,29 +13,27 @@ import {
   PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
+  Raycaster,
   Scene,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   WebGLRenderer
 } from 'three';
-import type { Material } from 'three';
+import type { Intersection, Material } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { ViewerConfig, ViewerStatus } from './types';
-
-interface LoadingProgress {
-  loaded: number;
-  total: number;
-  progress: number | null;
-}
+import type { LoadingProgress, ViewerApi, ViewerConfig, ViewerStatus } from './types';
 
 interface ViewerCallbacks {
   onProgress?: (progress: LoadingProgress) => void;
   onStatusChange?: (status: ViewerStatus) => void;
   onError?: (message: string) => void;
   onAutoRotateChange?: (enabled: boolean) => void;
+  onObjectClick?: (point: [number, number, number]) => void;
+  onEmptyClick?: () => void;
 }
 
 interface InitialViewState {
@@ -49,13 +47,6 @@ interface CreateViewerOptions extends ViewerCallbacks {
   config: ViewerConfig;
 }
 
-export interface ViewerApi {
-  load: () => Promise<void>;
-  resetView: () => void;
-  setAutoRotate: (enabled: boolean) => void;
-  isAutoRotateEnabled: () => boolean;
-  destroy: () => void;
-}
 
 const CAMERA_NEAR_DIVISOR = 120;
 const CAMERA_FAR_MULTIPLIER = 18;
@@ -67,7 +58,9 @@ export function createViewer({
   onProgress,
   onStatusChange,
   onError,
-  onAutoRotateChange
+  onAutoRotateChange,
+  onObjectClick,
+  onEmptyClick,
 }: CreateViewerOptions): ViewerApi {
   const scene = new Scene();
   scene.fog = new Fog(config.scene.fogColor, 20, 120);
@@ -143,6 +136,101 @@ export function createViewer({
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
+  interface TrackedLabel { el: HTMLElement; worldPos: Vector3; }
+  let trackedLabels: TrackedLabel[] = [];
+
+  function updateTrackedLabels() {
+    if (trackedLabels.length === 0) return;
+    const w = Math.max(mount.clientWidth, 1);
+    const h = Math.max(mount.clientHeight, 1);
+    for (const { el, worldPos } of trackedLabels) {
+      const v = worldPos.clone().project(camera);
+      if (v.z > 1) { el.style.visibility = 'hidden'; continue; }
+      el.style.visibility = '';
+      el.style.left = `${(v.x * 0.5 + 0.5) * w}px`;
+      el.style.top = `${(-v.y * 0.5 + 0.5) * h}px`;
+    }
+  }
+
+  function setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]) {
+    trackedLabels = defs.map(({ el, pos }) => ({ el, worldPos: new Vector3(...pos) }));
+  }
+
+  // ── Camera focus animation ───────────────────────────────────────────────
+  interface CamAnim {
+    startPos: Vector3; endPos: Vector3;
+    startTarget: Vector3; endTarget: Vector3;
+    progress: number;
+    onComplete?: () => void;
+  }
+  let camAnim: CamAnim | null = null;
+
+  function resetViewAnimated() {
+    if (!initialViewState) return;
+    camAnim = {
+      startPos: camera.position.clone(),
+      endPos: initialViewState.position.clone(),
+      startTarget: controls.target.clone(),
+      endTarget: initialViewState.target.clone(),
+      progress: 0,
+      onComplete: () => setAutoRotate(true),
+    };
+  }
+
+  function focusOnPoint(centerArr: [number, number, number], panelWidthFraction = 0) {
+    const target = new Vector3(...centerArr);
+    // Use the animation destination if mid-flight, so direction/distance are consistent.
+    const refPos = camAnim ? camAnim.endPos : camera.position;
+    const refTarget = camAnim ? camAnim.endTarget : controls.target;
+    const dir = new Vector3().subVectors(refPos, refTarget).normalize();
+    const newDist = Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2);
+
+    // Shift target rightward so the building stays centered in the viewport
+    // area left of the info panel (panelWidthFraction = panel px / viewport px).
+    if (panelWidthFraction > 0) {
+      const lookDir = dir.clone().negate();
+      const right = new Vector3().crossVectors(lookDir, camera.up).normalize();
+      const halfWidthWorld = Math.tan(MathUtils.degToRad(camera.fov / 2)) * newDist * camera.aspect;
+      target.addScaledVector(right, halfWidthWorld * panelWidthFraction);
+    }
+
+    camAnim = {
+      startPos: camera.position.clone(),
+      endPos: target.clone().addScaledVector(dir, newDist),
+      startTarget: controls.target.clone(),
+      endTarget: target,
+      progress: 0,
+    };
+    setAutoRotate(false);
+  }
+
+  // ── Raycasting / click detection ─────────────────────────────────────────
+  const raycaster = new Raycaster();
+  const ndcPointer = new Vector2();
+  let pointerDownX = 0;
+  let pointerDownY = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    pointerDownX = e.clientX;
+    pointerDownY = e.clientY;
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    const dx = e.clientX - pointerDownX;
+    const dy = e.clientY - pointerDownY;
+    if (Math.sqrt(dx * dx + dy * dy) > 5 || !onObjectClick) return;
+
+    const rect = canvas.getBoundingClientRect();
+    ndcPointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    ndcPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(ndcPointer, camera);
+    const hits = raycaster.intersectObjects(scene.children, true);
+    const hit = hits.find((h: Intersection<Object3D>) => h.object !== ground);
+    if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
+    else onEmptyClick?.();
+  });
+
   let initialViewState: InitialViewState | null = null;
   let modelRoot: Group | null = null;
   let resizeObserver: ResizeObserver | null = null;
@@ -164,11 +252,24 @@ export function createViewer({
   };
 
   const animate = () => {
-    if (destroyed) {
-      return;
+    if (destroyed) return;
+
+    if (camAnim) {
+      camAnim.progress = Math.min(camAnim.progress + 0.028, 1);
+      const t = easeInOutCubic(camAnim.progress);
+      camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, t);
+      controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, t);
+      controls.update();
+      if (camAnim.progress >= 1) {
+        const cb = camAnim.onComplete;
+        camAnim = null;
+        cb?.();
+      }
+    } else {
+      controls.update();
     }
 
-    controls.update();
+    updateTrackedLabels();
     renderer.render(scene, camera);
   };
 
@@ -314,6 +415,20 @@ export function createViewer({
     ground.position.set(center.x, bounds.min.y - 0.02, center.z);
   }
 
+  function zoomIn() {
+    const offset = new Vector3().subVectors(camera.position, controls.target);
+    offset.multiplyScalar(0.8);
+    camera.position.copy(controls.target).add(offset);
+    controls.update();
+  }
+
+  function zoomOut() {
+    const offset = new Vector3().subVectors(camera.position, controls.target);
+    offset.multiplyScalar(1.25);
+    camera.position.copy(controls.target).add(offset);
+    controls.update();
+  }
+
   function resetView() {
     if (!initialViewState) {
       return;
@@ -348,8 +463,13 @@ export function createViewer({
   return {
     load,
     resetView,
+    resetViewAnimated,
     setAutoRotate,
     isAutoRotateEnabled: () => controls.autoRotate,
+    zoomIn,
+    zoomOut,
+    setLabels,
+    focusOnPoint,
     destroy
   };
 
@@ -360,7 +480,7 @@ export function createViewer({
       gltfLoader.load(
         config.model.src,
         resolve,
-        (event) => {
+        (event: ProgressEvent) => {
           const total = event.total ?? 0;
           const loaded = event.loaded ?? 0;
           const progress = total > 0 ? loaded / total : null;
@@ -388,7 +508,7 @@ function applyModelTransform(modelRoot: Group, config: ViewerConfig) {
 }
 
 function applyShadowSettings(root: Object3D, enableShadows: boolean) {
-  root.traverse((child) => {
+  root.traverse((child: Object3D) => {
     if (!(child instanceof Mesh)) {
       return;
     }
@@ -399,7 +519,7 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
 }
 
 function disposeObject(root: Object3D) {
-  root.traverse((child) => {
+  root.traverse((child: Object3D) => {
     if (!(child instanceof Mesh)) {
       return;
     }
@@ -428,5 +548,9 @@ function mapViewerError(error: unknown, config: ViewerConfig) {
   }
 
   return `${config.ui.modelLoadError} (${rawMessage})`;
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
 
