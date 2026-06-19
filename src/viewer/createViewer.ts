@@ -436,12 +436,13 @@ export function createViewer({
     const verticalFitDistance = radius / Math.tan(fovInRadians / 2);
     const horizontalFitDistance = verticalFitDistance / camera.aspect;
     // fitDistance là khoảng cách từ camera đến tâm orbit, để toàn bộ model nằm trong view
-    const fitDistance = fitPadding * Math.max(verticalFitDistance, horizontalFitDistance);
+    const fitDistance =
+      fitPadding * Math.max(verticalFitDistance, horizontalFitDistance);
 
     // Giới hạn khoảng cách camera để tránh zoom quá gần hoặc quá xa
     const minDistance = fitDistance * 0.1;
     const maxDistance = fitDistance;
-    const initialDistance = maxDistance/2;
+    const initialDistance = maxDistance / 2;
 
     // Hướng đặt camera ban đầu so với tâm orbit, lấy từ config viewer-config.ts, fitDirection: [1.25, 0.72, 1.4]
     // .normalize() biến vector này thành vector đơn vị, nên độ lớn không quan trọng, chỉ quan trọng tỉ lệ giữa x/y/z
@@ -449,13 +450,18 @@ export function createViewer({
 
     // nextPosition là vị trí camera ban đầu, thực tế trong world space
     // nextPosition = hướng * khoảng cách + tâm orbit
-    const nextPosition = fitDirection.multiplyScalar(initialDistance).add(orbitTarget);
+    const nextPosition = fitDirection
+      .multiplyScalar(initialDistance)
+      .add(orbitTarget);
 
     camera.position.copy(nextPosition);
     // vật thể gần camera hơn khoảng này sẽ không được render.
     camera.near = Math.max(fitDistance / CAMERA_NEAR_DIVISOR, 0.01);
     // vật thể xa camera hơn khoảng này sẽ không được render.
-    camera.far = Math.max(fitDistance * CAMERA_FAR_MULTIPLIER, config.camera.far);
+    camera.far = Math.max(
+      fitDistance * CAMERA_FAR_MULTIPLIER,
+      config.camera.far,
+    );
     camera.updateProjectionMatrix();
 
     // Trục orbit thật nằm ở đây
@@ -512,7 +518,9 @@ export function createViewer({
     const diameter = Math.max(size.x, size.z) * 1.2;
 
     ground.scale.setScalar(Math.max(diameter, 12));
-    ground.position.set(0, bounds.min.y - 0.02, 0);
+    // TODO: Tính lại vị trí ground để nó nằm ngay dưới model, thay vì cố định y = -0.02
+    // TODO: Replace thành MB tổng thể
+    ground.position.set(size.x / 4, bounds.min.y - 0.02, -size.z / 2);
   }
 
   function zoomIn() {
