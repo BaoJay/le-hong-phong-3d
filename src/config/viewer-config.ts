@@ -34,8 +34,8 @@ export const viewerConfig: ViewerConfig = {
     fogColor: "#efefef",
     groundColor: "#e0e0e0",
     lights: {
-      ambientIntensity: 0.45,
-      hemisphereIntensity: 0.25,
+      ambientIntensity: 1.45,
+      hemisphereIntensity: 1.25,
       directionalIntensity: 2.4,
       sketchUpSunDirection: [-0.383216, -0.494039, 0.78043],
     },
