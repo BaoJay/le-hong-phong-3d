@@ -1,4 +1,23 @@
-export type ViewerStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type ViewerStatus = "idle" | "loading" | "ready" | "error";
+
+export interface LoadingProgress {
+  loaded: number;
+  total: number;
+  progress: number | null;
+}
+
+export interface ViewerApi {
+  load(): Promise<void>;
+  resetView(): void;
+  resetViewAnimated(): void;
+  setAutoRotate(enabled: boolean): void;
+  isAutoRotateEnabled(): boolean;
+  zoomIn(): void;
+  zoomOut(): void;
+  setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]): void;
+  focusOnPoint(center: [number, number, number], panelWidthFraction?: number): void;
+  destroy(): void;
+}
 
 export interface ViewerMeta {
   title: string;
@@ -29,7 +48,7 @@ export interface ViewerLights {
   ambientIntensity: number;
   hemisphereIntensity: number;
   directionalIntensity: number;
-  directionalPosition: [number, number, number];
+  sketchUpSunDirection: [number, number, number];
 }
 
 export interface ViewerSceneConfig {
@@ -54,6 +73,13 @@ export interface ViewerControlsConfig {
   stopAutoRotateOnInteract: boolean;
 }
 
+export interface ViewerDebugConfig {
+  showWorldAxes: boolean;
+  worldAxesSize: number;
+  worldAxesPosition: [number, number, number];
+  worldAxesColors: [string, string, string];
+}
+
 export interface UiTextConfig {
   instructions: string[];
   loadingStatus: string;
@@ -76,6 +102,6 @@ export interface ViewerConfig {
   scene: ViewerSceneConfig;
   camera: ViewerCameraConfig;
   controls: ViewerControlsConfig;
+  debug?: ViewerDebugConfig;
   ui: UiTextConfig;
 }
-

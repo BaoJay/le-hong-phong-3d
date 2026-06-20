@@ -8,97 +8,312 @@
     />
     <meta
       name="description"
-      content="Trình xem mô hình 3D khuôn viên THPT Lê Hồng Phong với Three.js."
+      content="Kỷ niệm 100 năm Trường THPT Chuyên Lê Hồng Phong."
     />
-    <title>THPT Lê Hồng Phong 3D Viewer</title>
+    <title>Một Trăm Năm Lê Hồng Phong</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Libertinus+Serif+Display&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app">
-      <main class="viewer-shell">
-        <section
-          id="viewer-stage"
-          class="viewer-stage"
-          aria-label="Trình xem mô hình 3D THPT Lê Hồng Phong"
+      <!-- Three.js canvas — fixed, fills entire viewport -->
+      <div id="viewer-stage">
+        <canvas
+          id="viewer-canvas"
+          aria-label="Mô hình 3D khuôn viên trường THPT Chuyên Lê Hồng Phong"
+        ></canvas>
+        <div
+          class="viewer-loading"
+          id="viewer-loading"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
         >
-          <canvas
-            id="viewer-canvas"
-            aria-label="Canvas hiển thị mô hình 3D trường THPT Lê Hồng Phong"
-          ></canvas>
-
-          <div class="viewer-overlay">
-            <header class="panel topbar">
-              <div class="brand-lockup">
-                <p class="brand-kicker" id="school-subtitle"></p>
-                <p class="brand-name" id="school-title"></p>
-              </div>
-
-              <nav class="topnav" aria-label="Điều hướng giao diện">
-                <a class="nav-link" href="#heritage">Di sản</a>
-                <a class="nav-link" href="#viewer-details">Khám phá</a>
-                <a class="nav-link" href="#controls">Điều khiển</a>
-              </nav>
-
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  gap: 1rem;
-                "
-              >
-                <p
-                  id="reset-view-button"
-                  class="topbar-badge"
-                  type="button"
-                ></p>
-                <p class="topbar-badge">Est. 1927 · Saigon</p>
-              </div>
-            </header>
-
-            <div class="overlay-grid">
-              <section class="panel hints-card">
-                <p class="panel-title">Cách tương tác</p>
-                <ul id="instruction-list" class="hints-list"></ul>
-              </section>
-
-              <section
-                id="controls"
-                class="panel controls-card"
-                aria-live="polite"
-              >
-                <div class="status-line">
-                  <p class="panel-title" id="status-label"></p>
-                  <span id="progress-value" class="status-value">0%</span>
-                </div>
-
-                <div id="progress-shell" class="progress-shell">
-                  <div
-                    class="progress-track"
-                    role="progressbar"
-                    aria-label="Tiến trình tải mô hình"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-valuenow="0"
-                  >
-                    <div id="progress-fill" class="progress-fill"></div>
-                  </div>
-                </div>
-
-                <p id="status-message" class="status-message"></p>
-                <p id="error-banner" class="error-banner" hidden></p>
-
-                <div class="button-row">
-                  <button
-                    id="toggle-auto-rotate-button"
-                    class="action-button action-button--ghost"
-                    type="button"
-                  ></button>
-                </div>
-              </section>
-            </div>
+          <div class="loading-orbit" aria-hidden="true">
+            <span></span>
           </div>
-        </section>
-      </main>
+          <div class="loading-copy">
+            <p class="loading-title" id="status-label"></p>
+            <p class="loading-message" id="status-message"></p>
+          </div>
+          <div class="progress-row">
+            <div id="progress-shell" class="progress-shell">
+              <div
+                class="progress-track"
+                role="progressbar"
+                aria-label="Tiến trình tải mô hình"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+            </div>
+            <span id="progress-value" class="progress-value">0%</span>
+          </div>
+          <div id="error-banner" class="loading-error" hidden></div>
+        </div>
+      </div>
+
+      <!-- Page overlay: nav + hero + hints -->
+      <div class="page-layout">
+        <!-- Left/right column markers -->
+        <div class="col-line col-line--left" aria-hidden="true"></div>
+        <div class="col-line col-line--right" aria-hidden="true"></div>
+
+        <!-- Top navigation -->
+        <header class="topbar">
+          <div class="brand" aria-label="Lê Hồng Phong">LHP</div>
+          <nav class="topnav" aria-label="Điều hướng chính">
+            <a class="nav-link" href="#" id="nav-kien-truc">Kiến Trúc</a>
+            <a class="nav-link" href="#">Hoạt Động</a>
+            <a class="nav-link" href="#">Nội Dung</a>
+            <a class="nav-link" href="#">Con Người</a>
+            <a class="nav-link" href="#">Tiếp Nối</a>
+          </nav>
+        </header>
+
+        <!-- Hero content — top left -->
+        <main class="hero">
+          <div class="hero-inner">
+            <span class="year-badge">1927 - 2027</span>
+            <h1 class="hero-title">MỘT TRĂM NĂM<br />LÊ HỒNG PHONG</h1>
+            <p class="hero-desc">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. In
+              turpis<br />
+              felis, pharetra in euismod eget, imperdiet ac tortor.
+            </p>
+          </div>
+        </main>
+
+        <!-- Bottom-right click hint -->
+        <button
+          class="start-hint"
+          id="start-hint-btn"
+          type="button"
+          aria-label="Nhấn để bắt đầu khám phá"
+        >
+          <div class="click-icon" aria-hidden="true">
+            <img src="/assets/start_hint.png" alt="" width="38" height="48" />
+          </div>
+          <span class="start-label">Nhấn để bắt đầu</span>
+        </button>
+      </div>
+
+      <!-- Explorer view overlay (shown after entering explorer mode) -->
+      <div class="explorer-overlay" id="explorer-overlay" aria-hidden="true">
+        <!-- Building labels — positions driven by 3D projection in main.ts -->
+        <div class="blabel blabel--a" id="label-khu-a">
+          <div class="blabel-inner">
+            <span class="blabel-text">Khu A</span>
+            <div class="blabel-line"></div>
+          </div>
+        </div>
+        <div class="blabel blabel--b" id="label-khu-b">
+          <div class="blabel-inner">
+            <span class="blabel-text">Khu B</span>
+            <div class="blabel-line"></div>
+          </div>
+        </div>
+        <div class="blabel blabel--c" id="label-khu-c">
+          <div class="blabel-inner">
+            <span class="blabel-text">Khu C</span>
+            <div class="blabel-line"></div>
+          </div>
+        </div>
+        <div class="blabel blabel--d" id="label-khu-d">
+          <div class="blabel-inner">
+            <span class="blabel-text">Khu D</span>
+            <div class="blabel-line"></div>
+          </div>
+        </div>
+        <div class="blabel blabel--nha-thi-dau" id="label-khu-nha-thi-dau">
+          <div class="blabel-inner">
+            <span class="blabel-text">Khu Nhà Thi Đấu</span>
+            <div class="blabel-line"></div>
+          </div>
+        </div>
+
+        <!-- Explorer click hint (bottom-left area) -->
+        <div class="explorer-hint" id="explorer-hint">
+          <img src="/assets/start_hint.png" alt="" width="38" height="48" />
+          <span>Nhấn tại một điểm<br />để khám phá</span>
+        </div>
+
+        <!-- Right-side zoom + tool controls -->
+        <div class="zoom-controls">
+          <button
+            class="zoom-btn"
+            id="zoom-in-btn"
+            type="button"
+            aria-label="Phóng to"
+          >
+            +
+          </button>
+          <button
+            class="zoom-btn"
+            id="zoom-out-btn"
+            type="button"
+            aria-label="Thu nhỏ"
+          >
+            −
+          </button>
+          <button
+            class="zoom-btn zoom-btn--icon"
+            id="toggle-rotate-btn"
+            type="button"
+            aria-label="Bật/tắt tự xoay"
+          >
+            <!-- Hand / grab icon -->
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M7.5 9V5.75a1.25 1.25 0 1 1 2.5 0V9m0 0V4.5a1.25 1.25 0 1 1 2.5 0V9m0 0V6a1.25 1.25 0 1 1 2.5 0v5.25A5.25 5.25 0 0 1 9.75 16.5H8.5A4.5 4.5 0 0 1 4 12v-2.5a1.25 1.25 0 1 1 2.5 0V9"
+                stroke="#666"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            class="zoom-btn zoom-btn--icon"
+            id="perspective-btn"
+            type="button"
+            aria-label="Đặt lại góc nhìn"
+          >
+            <!-- Floor-plan grid icon -->
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect
+                x="2.5"
+                y="2.5"
+                width="15"
+                height="15"
+                rx="1"
+                stroke="#666"
+                stroke-width="1.4"
+              />
+              <path
+                d="M2.5 7.5h15M2.5 12.5h15M7.5 2.5v15M12.5 2.5v15"
+                stroke="#666"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Info panel — slides in from right when a building is selected -->
+      <aside
+        class="info-panel"
+        id="info-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Thông tin tòa nhà"
+        hidden
+      >
+        <!-- Left vertical tab sidebar -->
+        <div class="info-panel__sidebar">
+          <nav
+            class="info-panel__tabs"
+            id="panel-tabs"
+            aria-label="Khu vực"
+          ></nav>
+          <button class="info-panel__share" type="button" aria-label="Chia sẻ">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="14"
+                cy="3.5"
+                r="1.8"
+                stroke="#888"
+                stroke-width="1.3"
+              />
+              <circle
+                cx="14"
+                cy="14.5"
+                r="1.8"
+                stroke="#888"
+                stroke-width="1.3"
+              />
+              <circle cx="4" cy="9" r="1.8" stroke="#888" stroke-width="1.3" />
+              <path
+                d="M5.6 8.1 12.4 4.8M5.6 9.9 12.4 13.2"
+                stroke="#888"
+                stroke-width="1.3"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Main content area -->
+        <div class="info-panel__main">
+          <button
+            class="info-panel__close"
+            id="info-panel-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M13 3 3 13M3 3l10 10"
+                stroke="#333"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+
+          <h2 class="info-panel__title" id="panel-title"></h2>
+
+          <div class="info-panel__text-block">
+            <p class="info-panel__desc" id="panel-desc"></p>
+          </div>
+
+          <dl class="info-panel__stats" id="panel-meta"></dl>
+
+          <div class="info-panel__footer">
+            <button class="info-panel__more" type="button">
+              Đọc thêm <span aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Hidden content seeds required by main.ts — do not remove -->
+      <div id="school-title" hidden></div>
+      <div id="school-subtitle" hidden></div>
+      <ul id="instruction-list" hidden></ul>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
