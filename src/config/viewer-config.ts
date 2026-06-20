@@ -46,6 +46,7 @@ export const viewerConfig: ViewerConfig = {
     enablePan: true,
     dampingFactor: 0.06,
     stopAutoRotateOnInteract: true,
+    orbitTarget: [50, 0, -80],
   },
   debug: {
     showWorldAxes: false,

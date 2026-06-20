@@ -106,37 +106,7 @@
 
       <!-- Explorer view overlay (shown after entering explorer mode) -->
       <div class="explorer-overlay" id="explorer-overlay" aria-hidden="true">
-        <!-- Building labels — positions driven by 3D projection in main.ts -->
-        <div class="blabel blabel--a" id="label-khu-a">
-          <div class="blabel-inner">
-            <span class="blabel-text">Khu A</span>
-            <div class="blabel-line"></div>
-          </div>
-        </div>
-        <div class="blabel blabel--b" id="label-khu-b">
-          <div class="blabel-inner">
-            <span class="blabel-text">Khu B</span>
-            <div class="blabel-line"></div>
-          </div>
-        </div>
-        <div class="blabel blabel--c" id="label-khu-c">
-          <div class="blabel-inner">
-            <span class="blabel-text">Khu C</span>
-            <div class="blabel-line"></div>
-          </div>
-        </div>
-        <div class="blabel blabel--d" id="label-khu-d">
-          <div class="blabel-inner">
-            <span class="blabel-text">Khu D</span>
-            <div class="blabel-line"></div>
-          </div>
-        </div>
-        <div class="blabel blabel--nha-thi-dau" id="label-khu-nha-thi-dau">
-          <div class="blabel-inner">
-            <span class="blabel-text">Khu Nhà Thi Đấu</span>
-            <div class="blabel-line"></div>
-          </div>
-        </div>
+        <!-- Building labels — dynamically generated in main.ts -->
 
         <!-- Explorer click hint (bottom-left area) -->
         <div class="explorer-hint" id="explorer-hint">
@@ -310,10 +280,7 @@
         </div>
       </aside>
 
-      <!-- Hidden content seeds required by main.ts — do not remove -->
-      <div id="school-title" hidden></div>
-      <div id="school-subtitle" hidden></div>
-      <ul id="instruction-list" hidden></ul>
+
     </div>
 
     <script type="module" src="/src/main.ts"></script>

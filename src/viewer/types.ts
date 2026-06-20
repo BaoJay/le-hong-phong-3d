@@ -71,13 +71,14 @@ export interface ViewerControlsConfig {
   enablePan: boolean;
   dampingFactor: number;
   stopAutoRotateOnInteract: boolean;
+  orbitTarget?: [number, number, number];
 }
 
 export interface ViewerDebugConfig {
-  showWorldAxes: boolean;
-  worldAxesSize: number;
-  worldAxesPosition: [number, number, number];
-  worldAxesColors: [string, string, string];
+  showWorldAxes?: boolean;
+  worldAxesSize?: number;
+  worldAxesPosition?: [number, number, number];
+  worldAxesColors?: [string, string, string];
 }
 
 export interface UiTextConfig {

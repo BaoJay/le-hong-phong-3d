@@ -185,9 +185,14 @@ export function createViewer({
     if (trackedLabels.length === 0) return;
     const w = Math.max(mount.clientWidth, 1);
     const h = Math.max(mount.clientHeight, 1);
+    const camDir = camera.getWorldDirection(new Vector3());
     for (const { el, worldPos } of trackedLabels) {
+      // Kiểm tra nhãn nằm đằng sau camera bằng dot product
+      const toPoint = worldPos.clone().sub(camera.position);
+      const dot = toPoint.dot(camDir);
+
       const v = worldPos.clone().project(camera);
-      if (v.z > 1) {
+      if (dot < 0 || v.z > 1) {
         el.style.visibility = "hidden";
         continue;
       }
@@ -284,10 +289,14 @@ export function createViewer({
     ndcPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(ndcPointer, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
-    const hit = hits.find((h: Intersection<Object3D>) => h.object !== ground);
-    if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
-    else onEmptyClick?.();
+    if (modelRoot) {
+      const hits = raycaster.intersectObject(modelRoot, true);
+      const hit = hits[0];
+      if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
+      else onEmptyClick?.();
+    } else {
+      onEmptyClick?.();
+    }
   });
 
   let initialViewState: InitialViewState | null = null;
@@ -335,7 +344,6 @@ export function createViewer({
   renderer.setAnimationLoop(animate);
   resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(mount);
-  window.addEventListener("resize", resize);
   resize();
 
   const stopAutoRotateOnInteract = () => {
@@ -425,9 +433,10 @@ export function createViewer({
   }
 
   function fitCameraToBounds(bounds: Box3) {
-    // Set trục orbit về trục xyz 0;0;0 của world space
-    // [50, 0, -80] là tâm điểm sân trường khu A
-    const orbitTarget = new Vector3(50, 0, -80);
+    // Đọc orbitTarget từ config hoặc dùng tâm bounding box làm fallback
+    const orbitTarget = config.controls.orbitTarget
+      ? new Vector3(...config.controls.orbitTarget)
+      : bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
     const radius = maxDimension / 2;
@@ -476,7 +485,7 @@ export function createViewer({
       target: orbitTarget.clone(),
     };
 
-    if (scene.fog) {
+    if (scene.fog instanceof Fog) {
       scene.fog.near = Math.max(fitDistance * 0.8, 10);
       scene.fog.far = Math.max(fitDistance * 4.5, 50);
     }
@@ -514,13 +523,13 @@ export function createViewer({
       return;
     }
 
+    const center = bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
     const diameter = Math.max(size.x, size.z) * 1.2;
 
     ground.scale.setScalar(Math.max(diameter, 12));
-    // TODO: Tính lại vị trí ground để nó nằm ngay dưới model, thay vì cố định y = -0.02
-    // TODO: Replace thành MB tổng thể
-    ground.position.set(size.x / 4, bounds.min.y - 0.02, -size.z / 2);
+    // Tự động định vị ground ở tâm X, Z của mô hình, và dưới chân mô hình (bounds.min.y) một khoảng nhỏ
+    ground.position.set(center.x, bounds.min.y - 0.02, center.z);
     ground.visible = config.model.enableGround;
   }
 
@@ -553,7 +562,6 @@ export function createViewer({
     renderer.setAnimationLoop(null);
     resizeObserver?.disconnect();
     resizeObserver = null;
-    window.removeEventListener("resize", resize);
     controls.removeEventListener("start", stopAutoRotateOnInteract);
     controls.dispose();
 
@@ -659,6 +667,13 @@ function disposeObject(root: Object3D) {
 }
 
 function disposeMaterial(material: Material) {
+  // Giải phóng các texture của material để tránh rò rỉ bộ nhớ GPU
+  for (const key of Object.keys(material)) {
+    const value = (material as any)[key];
+    if (value && typeof value.dispose === "function" && value.isTexture) {
+      value.dispose();
+    }
+  }
   material.dispose();
 }
 
