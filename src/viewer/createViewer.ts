@@ -4,9 +4,12 @@ import {
   Box3,
   Color,
   DirectionalLight,
+  EdgesGeometry,
   Fog,
   Group,
   HemisphereLight,
+  LineBasicMaterial,
+  LineSegments,
   MathUtils,
   Mesh,
   MeshStandardMaterial,
@@ -64,6 +67,11 @@ const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
 const DEFAULT_SHADOW_MAP_SIZE = 4096;
 const MIN_SUN_DISTANCE = 20;
 const MIN_SHADOW_EXTENT = 25;
+const DEFAULT_EDGE_COLOR = "#2f2f2f";
+const DEFAULT_EDGE_OPACITY = 0.72;
+const DEFAULT_EDGE_THRESHOLD_ANGLE = 24;
+const MODEL_EDGE_NAME = "SketchUpStyleEdges";
+const DISABLED_RAYCAST = () => undefined;
 
 export function createViewer({
   mount,
@@ -397,6 +405,7 @@ export function createViewer({
 
       applyModelTransform(modelRoot, config);
       applyShadowSettings(modelRoot, config.model.enableShadows);
+      applyModelEdges(modelRoot, config);
 
       scene.add(modelRoot);
 
@@ -627,6 +636,41 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
   });
 }
 
+function applyModelEdges(root: Object3D, config: ViewerConfig) {
+  const edgeConfig = config.model.edges;
+
+  if (!edgeConfig?.enabled) {
+    return;
+  }
+
+  const meshes: Mesh[] = [];
+  root.traverse((child: Object3D) => {
+    if (child instanceof Mesh) {
+      meshes.push(child);
+    }
+  });
+
+  for (const mesh of meshes) {
+    const opacity = edgeConfig.opacity ?? DEFAULT_EDGE_OPACITY;
+    const edges = new EdgesGeometry(
+      mesh.geometry,
+      edgeConfig.thresholdAngle ?? DEFAULT_EDGE_THRESHOLD_ANGLE,
+    );
+    const material = new LineBasicMaterial({
+      color: new Color(edgeConfig.color ?? DEFAULT_EDGE_COLOR),
+      transparent: opacity < 1,
+      opacity,
+      depthTest: true,
+      depthWrite: false,
+    });
+    const edgeLines = new LineSegments(edges, material);
+    edgeLines.name = MODEL_EDGE_NAME;
+    edgeLines.renderOrder = 1;
+    edgeLines.raycast = DISABLED_RAYCAST;
+    mesh.add(edgeLines);
+  }
+}
+
 function sketchUpSunDirectionToThree(
   sketchUpDirection: [number, number, number],
 ) {
@@ -643,7 +687,7 @@ function sketchUpSunDirectionToThree(
 
 function disposeObject(root: Object3D) {
   root.traverse((child: Object3D) => {
-    if (!(child instanceof Mesh)) {
+    if (!(child instanceof Mesh) && !(child instanceof LineSegments)) {
       return;
     }
 

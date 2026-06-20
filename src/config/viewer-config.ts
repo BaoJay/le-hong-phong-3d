@@ -14,6 +14,12 @@ export const viewerConfig: ViewerConfig = {
     initialScale: 1,
     enableGround: true,
     enableShadows: true,
+    edges: {
+      enabled: true,
+      color: "#2f2f2f",
+      opacity: 0.5,
+      thresholdAngle: 12,
+    },
   },
   draco: {
     decoderPath: `${baseUrl}draco/`,

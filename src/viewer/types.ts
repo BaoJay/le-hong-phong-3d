@@ -31,6 +31,14 @@ export interface ModelConfig {
   initialScale?: number;
   enableGround: boolean;
   enableShadows: boolean;
+  edges?: ModelEdgesConfig;
+}
+
+export interface ModelEdgesConfig {
+  enabled: boolean;
+  color?: string;
+  opacity?: number;
+  thresholdAngle?: number;
 }
 
 export interface DracoConfig {
