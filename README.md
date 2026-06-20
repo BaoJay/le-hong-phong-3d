@@ -28,7 +28,8 @@ npm run preview
 
 - `src/config/viewer-config.ts`: cấu hình metadata, model, Draco, ánh sáng và text UI.
 - `src/viewer/createViewer.ts`: khởi tạo scene, camera, controls, loader và lifecycle của viewer.
-- `public/models/le-hong-phong-campus-placeholder.glb`: model mẫu được generate tự động sau `npm install`.
+- `public/models/LHP100_20260607_pk.glb`: model thật đang được viewer tải.
+- `public/models/le-hong-phong-campus-placeholder.glb`: model placeholder được generate tự động sau `npm install`.
 - `docs/sketchup-to-glb.md`: checklist để thay model SketchUp thật vào app.
 
 ## Thay model thật
@@ -38,4 +39,3 @@ npm run preview
 3. Đặt file vào `public/models/`.
 4. Cập nhật `src` trong [viewer-config.ts](/home/baojay/le-hong-phong-3d/src/config/viewer-config.ts).
 5. Nếu cần chỉnh hướng model, sửa `initialRotation` hoặc `initialScale` trong cùng config.
-

@@ -1,12 +1,9 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const outputPath = resolve(
-  rootDir,
-  'public/models/le-hong-phong-campus-placeholder.glb'
-);
+const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const outputPath = resolve(rootDir, "public/models/le-hong-phong-campus-placeholder.glb");
 
 const positions = [];
 const normals = [];
@@ -35,8 +32,16 @@ const normalView = appendAlignedBuffer(normalBuffer, 4);
 const binBuffer = Buffer.concat(binChunks);
 
 const vertexCount = positions.length / 3;
-const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+const min = [
+  Number.POSITIVE_INFINITY,
+  Number.POSITIVE_INFINITY,
+  Number.POSITIVE_INFINITY,
+];
+const max = [
+  Number.NEGATIVE_INFINITY,
+  Number.NEGATIVE_INFINITY,
+  Number.NEGATIVE_INFINITY,
+];
 
 for (let index = 0; index < positions.length; index += 3) {
   min[0] = Math.min(min[0], positions[index]);
@@ -50,99 +55,99 @@ for (let index = 0; index < positions.length; index += 3) {
 
 const gltf = {
   asset: {
-    version: '2.0',
-    generator: 'Codex placeholder campus generator'
+    version: "2.0",
+    generator: "Codex placeholder campus generator",
   },
   scene: 0,
   scenes: [
     {
-      name: 'Campus Scene',
-      nodes: [0]
-    }
+      name: "Campus Scene",
+      nodes: [0],
+    },
   ],
   nodes: [
     {
-      name: 'Le Hong Phong Campus Placeholder',
-      mesh: 0
-    }
+      name: "Le Hong Phong Campus Placeholder",
+      mesh: 0,
+    },
   ],
   meshes: [
     {
-      name: 'CampusMassing',
+      name: "CampusMassing",
       primitives: [
         {
           attributes: {
             POSITION: 1,
-            NORMAL: 2
+            NORMAL: 2,
           },
           indices: 0,
-          material: 0
-        }
-      ]
-    }
+          material: 0,
+        },
+      ],
+    },
   ],
   materials: [
     {
-      name: 'WarmStone',
+      name: "WarmStone",
       pbrMetallicRoughness: {
         baseColorFactor: [0.87, 0.72, 0.45, 1],
         metallicFactor: 0.03,
-        roughnessFactor: 0.9
-      }
-    }
+        roughnessFactor: 0.9,
+      },
+    },
   ],
   accessors: [
     {
       bufferView: 0,
       componentType: 5123,
       count: indices.length,
-      type: 'SCALAR',
+      type: "SCALAR",
       max: [Math.max(...indices)],
-      min: [0]
+      min: [0],
     },
     {
       bufferView: 1,
       componentType: 5126,
       count: vertexCount,
-      type: 'VEC3',
+      type: "VEC3",
       min,
-      max
+      max,
     },
     {
       bufferView: 2,
       componentType: 5126,
       count: vertexCount,
-      type: 'VEC3'
-    }
+      type: "VEC3",
+    },
   ],
   bufferViews: [
     {
       buffer: 0,
       byteOffset: indexView.byteOffset,
       byteLength: indexView.byteLength,
-      target: 34963
+      target: 34963,
     },
     {
       buffer: 0,
       byteOffset: positionView.byteOffset,
       byteLength: positionView.byteLength,
-      target: 34962
+      target: 34962,
     },
     {
       buffer: 0,
       byteOffset: normalView.byteOffset,
       byteLength: normalView.byteLength,
-      target: 34962
-    }
+      target: 34962,
+    },
   ],
   buffers: [
     {
-      byteLength: binBuffer.length
-    }
-  ]
+      byteLength: binBuffer.length,
+    },
+  ],
 };
 
-const jsonChunk = padChunk(Buffer.from(JSON.stringify(gltf), 'utf8'), 0x20);
+const jsonChunk = padChunk(Buffer.from(JSON.stringify(gltf), "utf8"), 0x20);
 const binChunk = padChunk(binBuffer, 0x00);
 const totalLength = 12 + 8 + jsonChunk.length + 8 + binChunk.length;
 
@@ -162,7 +167,7 @@ binHeader.writeUInt32LE(0x004e4942, 4);
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(
   outputPath,
-  Buffer.concat([header, jsonHeader, jsonChunk, binHeader, binChunk])
+  Buffer.concat([header, jsonHeader, jsonChunk, binHeader, binChunk]),
 );
 
 console.log(`Generated placeholder GLB at ${outputPath}`);
@@ -181,7 +186,7 @@ function appendAlignedBuffer(buffer, alignment) {
 
   return {
     byteOffset: startOffset,
-    byteLength: buffer.length
+    byteLength: buffer.length,
   };
 }
 
@@ -219,54 +224,54 @@ function addBox(center, size) {
       [maxX, minY, maxZ],
       [maxX, minY, minZ],
       [maxX, maxY, minZ],
-      [maxX, maxY, maxZ]
+      [maxX, maxY, maxZ],
     ],
-    [1, 0, 0]
+    [1, 0, 0],
   );
   pushFace(
     [
       [minX, minY, minZ],
       [minX, minY, maxZ],
       [minX, maxY, maxZ],
-      [minX, maxY, minZ]
+      [minX, maxY, minZ],
     ],
-    [-1, 0, 0]
+    [-1, 0, 0],
   );
   pushFace(
     [
       [minX, maxY, maxZ],
       [maxX, maxY, maxZ],
       [maxX, maxY, minZ],
-      [minX, maxY, minZ]
+      [minX, maxY, minZ],
     ],
-    [0, 1, 0]
+    [0, 1, 0],
   );
   pushFace(
     [
       [minX, minY, minZ],
       [maxX, minY, minZ],
       [maxX, minY, maxZ],
-      [minX, minY, maxZ]
+      [minX, minY, maxZ],
     ],
-    [0, -1, 0]
+    [0, -1, 0],
   );
   pushFace(
     [
       [minX, minY, maxZ],
       [maxX, minY, maxZ],
       [maxX, maxY, maxZ],
-      [minX, maxY, maxZ]
+      [minX, maxY, maxZ],
     ],
-    [0, 0, 1]
+    [0, 0, 1],
   );
   pushFace(
     [
       [maxX, minY, minZ],
       [minX, minY, minZ],
       [minX, maxY, minZ],
-      [maxX, maxY, minZ]
+      [maxX, maxY, minZ],
     ],
-    [0, 0, -1]
+    [0, 0, -1],
   );
 }
 
@@ -284,7 +289,6 @@ function pushFace(corners, normal) {
     baseIndex + 2,
     baseIndex,
     baseIndex + 2,
-    baseIndex + 3
+    baseIndex + 3,
   );
 }
-
