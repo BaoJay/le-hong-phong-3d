@@ -2,6 +2,7 @@ import {
   AmbientLight,
   AxesHelper,
   Box3,
+  BufferGeometry,
   Color,
   DirectionalLight,
   EdgesGeometry,
@@ -10,6 +11,7 @@ import {
   HemisphereLight,
   LineBasicMaterial,
   LineSegments,
+  Matrix4,
   MathUtils,
   Mesh,
   MeshStandardMaterial,
@@ -24,11 +26,12 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import type { Intersection, Material } from "three";
+import type { Material } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type {
   LoadingProgress,
   ViewerApi,
@@ -71,7 +74,19 @@ const DEFAULT_EDGE_COLOR = "#2f2f2f";
 const DEFAULT_EDGE_OPACITY = 0.72;
 const DEFAULT_EDGE_THRESHOLD_ANGLE = 24;
 const MODEL_EDGE_NAME = "SketchUpStyleEdges";
+const MERGED_MODEL_NAME = "MergedStaticModel";
+const MERGED_MESH_NAME = "MergedStaticMesh";
 const DISABLED_RAYCAST = () => undefined;
+const MAX_RENDER_PIXEL_RATIO = 1.25;
+const MAX_FRAME_DELTA_SECONDS = 1 / 30;
+const DEFAULT_FRAME_DELTA_SECONDS = 1 / 60;
+const CAMERA_ANIMATION_DURATION_SECONDS = 0.55;
+
+interface StaticMeshBucket {
+  geometries: BufferGeometry[];
+  material: Material;
+  sourceMeshes: Mesh[];
+}
 
 export function createViewer({
   mount,
@@ -102,7 +117,10 @@ export function createViewer({
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = config.model.enableShadows;
   renderer.shadowMap.type = PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.autoUpdate = false;
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO),
+  );
   renderer.setClearColor(new Color("#000000"), 0);
 
   const controls = new OrbitControls(camera, canvas);
@@ -186,6 +204,9 @@ export function createViewer({
   interface TrackedLabel {
     el: HTMLElement;
     worldPos: Vector3;
+    screenX: number;
+    screenY: number;
+    visible: boolean;
   }
   let trackedLabels: TrackedLabel[] = [];
 
@@ -216,6 +237,9 @@ export function createViewer({
     trackedLabels = defs.map(({ el, pos }) => ({
       el,
       worldPos: new Vector3(...pos),
+      screenX: Number.NaN,
+      screenY: Number.NaN,
+      visible: true,
     }));
   }
 
@@ -323,26 +347,38 @@ export function createViewer({
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO),
+    );
     renderer.setSize(width, height, false);
   };
 
-  const animate = () => {
+  let lastFrameTime = 0;
+  const animate = (time = 0) => {
     if (destroyed) return;
 
+    const deltaTime =
+      lastFrameTime > 0
+        ? Math.min((time - lastFrameTime) / 1000, MAX_FRAME_DELTA_SECONDS)
+        : DEFAULT_FRAME_DELTA_SECONDS;
+    lastFrameTime = time;
+
     if (camAnim) {
-      camAnim.progress = Math.min(camAnim.progress + 0.028, 1);
+      camAnim.progress = Math.min(
+        camAnim.progress + deltaTime / CAMERA_ANIMATION_DURATION_SECONDS,
+        1,
+      );
       const t = easeInOutCubic(camAnim.progress);
       camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, t);
       controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, t);
-      controls.update();
+      controls.update(deltaTime);
       if (camAnim.progress >= 1) {
         const cb = camAnim.onComplete;
         camAnim = null;
         cb?.();
       }
     } else {
-      controls.update();
+      controls.update(deltaTime);
     }
 
     updateTrackedLabels();
@@ -371,6 +407,15 @@ export function createViewer({
   function setAutoRotate(enabled: boolean) {
     controls.autoRotate = enabled;
     onAutoRotateChange?.(enabled);
+  }
+
+  function requestShadowMapUpdate() {
+    if (!config.model.enableShadows) {
+      return;
+    }
+
+    renderer.shadowMap.needsUpdate = true;
+    directionalLight.shadow.needsUpdate = true;
   }
 
   async function load(): Promise<void> {
@@ -412,8 +457,12 @@ export function createViewer({
       modelRoot.name = "LeHongPhongCampus";
 
       applyModelTransform(modelRoot, config);
+      const modelEdges = createMergedModelEdges(modelRoot, config);
+      optimizeStaticMeshes(modelRoot);
       applyShadowSettings(modelRoot, config.model.enableShadows);
-      applyModelEdges(modelRoot, config);
+      if (modelEdges) {
+        modelRoot.add(modelEdges);
+      }
 
       scene.add(modelRoot);
 
@@ -426,6 +475,7 @@ export function createViewer({
       fitCameraToBounds(bounds);
       updateSunLight(bounds);
       updateGround(bounds);
+      requestShadowMapUpdate();
 
       onProgress?.({
         loaded: 1,
@@ -644,38 +694,223 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
   });
 }
 
-function applyModelEdges(root: Object3D, config: ViewerConfig) {
+function createMergedModelEdges(
+  root: Object3D,
+  config: ViewerConfig,
+): LineSegments | null {
   const edgeConfig = config.model.edges;
 
   if (!edgeConfig?.enabled) {
+    return null;
+  }
+
+  root.updateMatrixWorld(true);
+
+  const rootInverse = new Matrix4().copy(root.matrixWorld).invert();
+  const meshToRoot = new Matrix4();
+  const edgeGeometries: BufferGeometry[] = [];
+
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh) || !child.visible) {
+      return;
+    }
+
+    const position = child.geometry.getAttribute("position");
+    if (!position) {
+      return;
+    }
+
+    const edges = new EdgesGeometry(
+      child.geometry,
+      edgeConfig.thresholdAngle ?? DEFAULT_EDGE_THRESHOLD_ANGLE,
+    );
+
+    meshToRoot.multiplyMatrices(rootInverse, child.matrixWorld);
+    edges.applyMatrix4(meshToRoot);
+    edgeGeometries.push(edges);
+  });
+
+  if (edgeGeometries.length === 0) {
+    return null;
+  }
+
+  const geometry =
+    edgeGeometries.length === 1
+      ? edgeGeometries[0]
+      : mergeGeometries(edgeGeometries, false);
+
+  if (!geometry) {
+    edgeGeometries.forEach((edgeGeometry) => edgeGeometry.dispose());
+    return null;
+  }
+
+  if (edgeGeometries.length > 1) {
+    edgeGeometries.forEach((edgeGeometry) => edgeGeometry.dispose());
+  }
+
+  const opacity = edgeConfig.opacity ?? DEFAULT_EDGE_OPACITY;
+  const material = new LineBasicMaterial({
+    color: new Color(edgeConfig.color ?? DEFAULT_EDGE_COLOR),
+    transparent: opacity < 1,
+    opacity,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const edgeLines = new LineSegments(geometry, material);
+  edgeLines.name = MODEL_EDGE_NAME;
+  edgeLines.matrixAutoUpdate = false;
+  edgeLines.renderOrder = 1;
+  edgeLines.raycast = DISABLED_RAYCAST;
+
+  return edgeLines;
+}
+
+function optimizeStaticMeshes(root: Object3D) {
+  root.updateMatrixWorld(true);
+
+  const rootInverse = new Matrix4().copy(root.matrixWorld).invert();
+  const meshToRoot = new Matrix4();
+  const buckets = new Map<string, StaticMeshBucket>();
+  const renderableMeshes: Mesh[] = [];
+
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh) || !child.visible) {
+      return;
+    }
+
+    renderableMeshes.push(child);
+
+    if (!isMergeableStaticMesh(child)) {
+      return;
+    }
+
+    const material = child.material as Material;
+    const key = `${material.uuid}:${getGeometryMergeSignature(child.geometry)}`;
+    let bucket = buckets.get(key);
+
+    if (!bucket) {
+      bucket = {
+        geometries: [],
+        material,
+        sourceMeshes: [],
+      };
+      buckets.set(key, bucket);
+    }
+
+    const geometry = child.geometry.clone();
+    meshToRoot.multiplyMatrices(rootInverse, child.matrixWorld);
+    geometry.applyMatrix4(meshToRoot);
+    bucket.geometries.push(geometry);
+    bucket.sourceMeshes.push(child);
+  });
+
+  if (buckets.size === 0) {
     return;
   }
 
-  const meshes: Mesh[] = [];
-  root.traverse((child: Object3D) => {
-    if (child instanceof Mesh) {
-      meshes.push(child);
-    }
-  });
+  const optimizedRoot = new Group();
+  optimizedRoot.name = MERGED_MODEL_NAME;
+  optimizedRoot.matrixAutoUpdate = false;
+  const mergedSourceMeshes = new Set<Mesh>();
 
-  for (const mesh of meshes) {
-    const opacity = edgeConfig.opacity ?? DEFAULT_EDGE_OPACITY;
-    const edges = new EdgesGeometry(
-      mesh.geometry,
-      edgeConfig.thresholdAngle ?? DEFAULT_EDGE_THRESHOLD_ANGLE,
+  for (const bucket of buckets.values()) {
+    const geometry =
+      bucket.geometries.length === 1
+        ? bucket.geometries[0]
+        : mergeGeometries(bucket.geometries, false);
+
+    if (!geometry) {
+      bucket.geometries.forEach((bucketGeometry) => bucketGeometry.dispose());
+      continue;
+    }
+
+    if (bucket.geometries.length > 1) {
+      bucket.geometries.forEach((bucketGeometry) => bucketGeometry.dispose());
+    }
+
+    const mesh = new Mesh(geometry, bucket.material);
+    mesh.name = MERGED_MESH_NAME;
+    mesh.matrixAutoUpdate = false;
+    optimizedRoot.add(mesh);
+    bucket.sourceMeshes.forEach((sourceMesh) =>
+      mergedSourceMeshes.add(sourceMesh),
     );
-    const material = new LineBasicMaterial({
-      color: new Color(edgeConfig.color ?? DEFAULT_EDGE_COLOR),
-      transparent: opacity < 1,
-      opacity,
-      depthTest: true,
-      depthWrite: false,
-    });
-    const edgeLines = new LineSegments(edges, material);
-    edgeLines.name = MODEL_EDGE_NAME;
-    edgeLines.renderOrder = 1;
-    edgeLines.raycast = DISABLED_RAYCAST;
-    mesh.add(edgeLines);
+  }
+
+  if (optimizedRoot.children.length === 0) {
+    return;
+  }
+
+  const sourceGeometries = new Set<BufferGeometry>();
+  for (const mesh of mergedSourceMeshes) {
+    sourceGeometries.add(mesh.geometry);
+  }
+
+  if (mergedSourceMeshes.size === renderableMeshes.length) {
+    root.clear();
+  } else {
+    for (const mesh of mergedSourceMeshes) {
+      mesh.parent?.remove(mesh);
+    }
+    pruneEmptyBranches(root);
+  }
+
+  for (const geometry of sourceGeometries) {
+    geometry.dispose();
+  }
+
+  root.add(optimizedRoot);
+  root.updateMatrixWorld(true);
+}
+
+function isMergeableStaticMesh(mesh: Mesh): boolean {
+  if (Array.isArray(mesh.material)) {
+    return false;
+  }
+
+  if (mesh.material.transparent) {
+    return false;
+  }
+
+  if ((mesh as any).isSkinnedMesh || mesh.morphTargetInfluences) {
+    return false;
+  }
+
+  return Boolean(mesh.geometry.getAttribute("position"));
+}
+
+function getGeometryMergeSignature(geometry: BufferGeometry) {
+  const attributes = Object.keys(geometry.attributes)
+    .sort()
+    .map((name) => {
+      const attribute = geometry.getAttribute(name);
+      const array = (attribute as any).array ?? (attribute as any).data?.array;
+      const arrayName = array?.constructor.name ?? "unknown";
+      return `${name}:${attribute.itemSize}:${attribute.normalized}:${arrayName}`;
+    })
+    .join("|");
+  const morphAttributes = Object.keys(geometry.morphAttributes)
+    .sort()
+    .join(",");
+  return [
+    `indexed:${Boolean(geometry.index)}`,
+    `attrs:${attributes}`,
+    `morph:${morphAttributes}`,
+  ].join("|");
+}
+
+function pruneEmptyBranches(root: Object3D) {
+  for (let index = root.children.length - 1; index >= 0; index -= 1) {
+    const child = root.children[index];
+    pruneEmptyBranches(child);
+
+    if (
+      child.children.length === 0 &&
+      !(child instanceof Mesh) &&
+      !(child instanceof LineSegments)
+    ) {
+      root.remove(child);
+    }
   }
 }
 
@@ -694,20 +929,26 @@ function sketchUpSunDirectionToThree(
 }
 
 function disposeObject(root: Object3D) {
+  const geometries = new Set<BufferGeometry>();
+  const materials = new Set<Material>();
+
   root.traverse((child: Object3D) => {
     if (!(child instanceof Mesh) && !(child instanceof LineSegments)) {
       return;
     }
 
-    child.geometry.dispose();
+    geometries.add(child.geometry);
 
     if (Array.isArray(child.material)) {
-      child.material.forEach(disposeMaterial);
+      child.material.forEach((material) => materials.add(material));
       return;
     }
 
-    disposeMaterial(child.material);
+    materials.add(child.material);
   });
+
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach(disposeMaterial);
 }
 
 function disposeMaterial(material: Material) {

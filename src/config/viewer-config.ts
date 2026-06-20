@@ -18,7 +18,7 @@ export const viewerConfig: ViewerConfig = {
       enabled: true,
       color: "#2f2f2f",
       opacity: 0.5,
-      thresholdAngle: 12,
+      thresholdAngle: 30,
     },
   },
   draco: {
