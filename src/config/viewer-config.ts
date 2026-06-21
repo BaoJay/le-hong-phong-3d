@@ -52,7 +52,7 @@ export const viewerConfig: ViewerConfig = {
     enablePan: true,
     dampingFactor: 0.06,
     stopAutoRotateOnInteract: true,
-    orbitTarget: [50, 0, -80],
+    orbitTarget: [50, 0, -80], // Tâm xoay tại tim sân trường khu A
   },
   debug: {
     showWorldAxes: false,
