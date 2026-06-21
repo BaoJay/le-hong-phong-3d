@@ -31,6 +31,14 @@ export interface ModelConfig {
   initialScale?: number;
   enableGround: boolean;
   enableShadows: boolean;
+  edges?: ModelEdgesConfig;
+}
+
+export interface ModelEdgesConfig {
+  enabled: boolean;
+  color?: string;
+  opacity?: number;
+  thresholdAngle?: number;
 }
 
 export interface DracoConfig {
@@ -71,13 +79,14 @@ export interface ViewerControlsConfig {
   enablePan: boolean;
   dampingFactor: number;
   stopAutoRotateOnInteract: boolean;
+  orbitTarget?: [number, number, number];
 }
 
 export interface ViewerDebugConfig {
-  showWorldAxes: boolean;
-  worldAxesSize: number;
-  worldAxesPosition: [number, number, number];
-  worldAxesColors: [string, string, string];
+  showWorldAxes?: boolean;
+  worldAxesSize?: number;
+  worldAxesPosition?: [number, number, number];
+  worldAxesColors?: [string, string, string];
 }
 
 export interface UiTextConfig {
