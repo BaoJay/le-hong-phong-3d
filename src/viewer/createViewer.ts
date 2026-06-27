@@ -1,11 +1,17 @@
 import {
   AmbientLight,
+  AxesHelper,
   Box3,
+  BufferGeometry,
   Color,
   DirectionalLight,
+  EdgesGeometry,
   Fog,
   Group,
   HemisphereLight,
+  LineBasicMaterial,
+  LineSegments,
+  Matrix4,
   MathUtils,
   Mesh,
   MeshStandardMaterial,
@@ -18,14 +24,20 @@ import {
   SRGBColorSpace,
   Vector2,
   Vector3,
-  WebGLRenderer
-} from 'three';
-import type { Intersection, Material } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import type { LoadingProgress, ViewerApi, ViewerConfig, ViewerStatus } from './types';
+  WebGLRenderer,
+} from "three";
+import type { Material } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type {
+  LoadingProgress,
+  ViewerApi,
+  ViewerConfig,
+  ViewerStatus,
+} from "./types";
 
 interface ViewerCallbacks {
   onProgress?: (progress: LoadingProgress) => void;
@@ -47,9 +59,34 @@ interface CreateViewerOptions extends ViewerCallbacks {
   config: ViewerConfig;
 }
 
-
 const CAMERA_NEAR_DIVISOR = 120;
 const CAMERA_FAR_MULTIPLIER = 18;
+const DEFAULT_DEBUG_AXES_SIZE = 20;
+const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
+  "#2f72ff",
+  "#2fbf5b",
+  "#ff2f2f",
+];
+const DEFAULT_SHADOW_MAP_SIZE = 4096;
+const MIN_SUN_DISTANCE = 20;
+const MIN_SHADOW_EXTENT = 25;
+const DEFAULT_EDGE_COLOR = "#2f2f2f";
+const DEFAULT_EDGE_OPACITY = 0.72;
+const DEFAULT_EDGE_THRESHOLD_ANGLE = 24;
+const MODEL_EDGE_NAME = "SketchUpStyleEdges";
+const MERGED_MODEL_NAME = "MergedStaticModel";
+const MERGED_MESH_NAME = "MergedStaticMesh";
+const DISABLED_RAYCAST = () => undefined;
+const MAX_RENDER_PIXEL_RATIO = 1.25;
+const MAX_FRAME_DELTA_SECONDS = 1 / 30;
+const DEFAULT_FRAME_DELTA_SECONDS = 1 / 60;
+const CAMERA_ANIMATION_DURATION_SECONDS = 0.55;
+
+interface StaticMeshBucket {
+  geometries: BufferGeometry[];
+  material: Material;
+  sourceMeshes: Mesh[];
+}
 
 export function createViewer({
   mount,
@@ -69,19 +106,22 @@ export function createViewer({
     config.camera.fov,
     1,
     config.camera.near,
-    config.camera.far
+    config.camera.far,
   );
 
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: true
+    alpha: true,
   });
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = config.model.enableShadows;
   renderer.shadowMap.type = PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(new Color('#000000'), 0);
+  renderer.shadowMap.autoUpdate = false;
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO),
+  );
+  renderer.setClearColor(new Color("#000000"), 0);
 
   const controls = new OrbitControls(camera, canvas);
   controls.enablePan = config.controls.enablePan;
@@ -94,40 +134,65 @@ export function createViewer({
   controls.maxDistance = 400;
   controls.target.set(0, 0, 0);
 
-  const ambientLight = new AmbientLight('#ffffff', config.scene.lights.ambientIntensity);
+  const ambientLight = new AmbientLight(
+    "#ffffff",
+    config.scene.lights.ambientIntensity,
+  );
   const hemisphereLight = new HemisphereLight(
-    '#fff4d2',
+    "#fff4d2",
     config.scene.groundColor,
-    config.scene.lights.hemisphereIntensity
+    config.scene.lights.hemisphereIntensity,
   );
   const directionalLight = new DirectionalLight(
-    '#fff9ea',
-    config.scene.lights.directionalIntensity
+    "#fff9ea",
+    config.scene.lights.directionalIntensity,
   );
-  directionalLight.position.set(...config.scene.lights.directionalPosition);
+  directionalLight.position
+    .copy(sketchUpSunDirectionToThree(config.scene.lights.sketchUpSunDirection))
+    .multiplyScalar(MIN_SUN_DISTANCE);
   directionalLight.castShadow = config.model.enableShadows;
-  directionalLight.shadow.mapSize.set(2048, 2048);
+  directionalLight.shadow.mapSize.set(
+    DEFAULT_SHADOW_MAP_SIZE,
+    DEFAULT_SHADOW_MAP_SIZE,
+  );
   directionalLight.shadow.bias = -0.00008;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 80;
-  directionalLight.shadow.camera.left = -35;
-  directionalLight.shadow.camera.right = 35;
-  directionalLight.shadow.camera.top = 35;
-  directionalLight.shadow.camera.bottom = -35;
+  directionalLight.shadow.normalBias = 0.015;
+  directionalLight.shadow.camera.near = 0.1;
+  directionalLight.shadow.camera.far = 100;
+  directionalLight.shadow.camera.left = -MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.right = MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.top = MIN_SHADOW_EXTENT;
+  directionalLight.shadow.camera.bottom = -MIN_SHADOW_EXTENT;
 
-  scene.add(ambientLight, hemisphereLight, directionalLight, directionalLight.target);
+  scene.add(
+    ambientLight,
+    hemisphereLight,
+    directionalLight,
+    directionalLight.target,
+  );
+
+  const worldAxes = new AxesHelper(
+    config.debug?.worldAxesSize ?? DEFAULT_DEBUG_AXES_SIZE,
+  );
+  worldAxes.name = "DebugWorldAxes";
+  worldAxes.setColors(
+    ...(config.debug?.worldAxesColors ?? DEFAULT_DEBUG_AXES_COLORS),
+  );
+  worldAxes.position.set(...(config.debug?.worldAxesPosition ?? [0, 0, 0]));
+  worldAxes.visible = config.debug?.showWorldAxes ?? false;
+  scene.add(worldAxes);
 
   const ground = new Mesh(
     new PlaneGeometry(1, 1),
     new MeshStandardMaterial({
       color: new Color(config.scene.groundColor),
       roughness: 0.95,
-      metalness: 0.02
-    })
+      metalness: 0.02,
+    }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = config.model.enableShadows;
-  ground.visible = config.model.enableGround;
+  ground.visible = false;
   scene.add(ground);
 
   const dracoLoader = new DRACOLoader();
@@ -136,30 +201,54 @@ export function createViewer({
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  interface TrackedLabel { el: HTMLElement; worldPos: Vector3; }
+  interface TrackedLabel {
+    el: HTMLElement;
+    worldPos: Vector3;
+    screenX: number;
+    screenY: number;
+    visible: boolean;
+  }
   let trackedLabels: TrackedLabel[] = [];
 
   function updateTrackedLabels() {
     if (trackedLabels.length === 0) return;
     const w = Math.max(mount.clientWidth, 1);
     const h = Math.max(mount.clientHeight, 1);
+    const camDir = camera.getWorldDirection(new Vector3());
     for (const { el, worldPos } of trackedLabels) {
+      // Kiểm tra nhãn nằm đằng sau camera bằng dot product
+      const toPoint = worldPos.clone().sub(camera.position);
+      const dot = toPoint.dot(camDir);
+
       const v = worldPos.clone().project(camera);
-      if (v.z > 1) { el.style.visibility = 'hidden'; continue; }
-      el.style.visibility = '';
+      if (dot < 0 || v.z > 1) {
+        el.style.visibility = "hidden";
+        continue;
+      }
+      el.style.visibility = "";
       el.style.left = `${(v.x * 0.5 + 0.5) * w}px`;
       el.style.top = `${(-v.y * 0.5 + 0.5) * h}px`;
     }
   }
 
-  function setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]) {
-    trackedLabels = defs.map(({ el, pos }) => ({ el, worldPos: new Vector3(...pos) }));
+  function setLabels(
+    defs: { el: HTMLElement; pos: [number, number, number] }[],
+  ) {
+    trackedLabels = defs.map(({ el, pos }) => ({
+      el,
+      worldPos: new Vector3(...pos),
+      screenX: Number.NaN,
+      screenY: Number.NaN,
+      visible: true,
+    }));
   }
 
   // ── Camera focus animation ───────────────────────────────────────────────
   interface CamAnim {
-    startPos: Vector3; endPos: Vector3;
-    startTarget: Vector3; endTarget: Vector3;
+    startPos: Vector3;
+    endPos: Vector3;
+    startTarget: Vector3;
+    endTarget: Vector3;
     progress: number;
     onComplete?: () => void;
   }
@@ -177,20 +266,27 @@ export function createViewer({
     };
   }
 
-  function focusOnPoint(centerArr: [number, number, number], panelWidthFraction = 0) {
+  function focusOnPoint(
+    centerArr: [number, number, number],
+    panelWidthFraction = 0,
+  ) {
     const target = new Vector3(...centerArr);
     // Use the animation destination if mid-flight, so direction/distance are consistent.
     const refPos = camAnim ? camAnim.endPos : camera.position;
     const refTarget = camAnim ? camAnim.endTarget : controls.target;
     const dir = new Vector3().subVectors(refPos, refTarget).normalize();
-    const newDist = Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2);
+    const newDist = Math.max(
+      refPos.distanceTo(refTarget) * 0.38,
+      controls.minDistance * 2,
+    );
 
     // Shift target rightward so the building stays centered in the viewport
     // area left of the info panel (panelWidthFraction = panel px / viewport px).
     if (panelWidthFraction > 0) {
       const lookDir = dir.clone().negate();
       const right = new Vector3().crossVectors(lookDir, camera.up).normalize();
-      const halfWidthWorld = Math.tan(MathUtils.degToRad(camera.fov / 2)) * newDist * camera.aspect;
+      const halfWidthWorld =
+        Math.tan(MathUtils.degToRad(camera.fov / 2)) * newDist * camera.aspect;
       target.addScaledVector(right, halfWidthWorld * panelWidthFraction);
     }
 
@@ -210,12 +306,12 @@ export function createViewer({
   let pointerDownX = 0;
   let pointerDownY = 0;
 
-  canvas.addEventListener('pointerdown', (e) => {
+  canvas.addEventListener("pointerdown", (e) => {
     pointerDownX = e.clientX;
     pointerDownY = e.clientY;
   });
 
-  canvas.addEventListener('pointerup', (e) => {
+  canvas.addEventListener("pointerup", (e) => {
     const dx = e.clientX - pointerDownX;
     const dy = e.clientY - pointerDownY;
     if (Math.sqrt(dx * dx + dy * dy) > 5 || !onObjectClick) return;
@@ -225,10 +321,14 @@ export function createViewer({
     ndcPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(ndcPointer, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
-    const hit = hits.find((h: Intersection<Object3D>) => h.object !== ground);
-    if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
-    else onEmptyClick?.();
+    if (modelRoot) {
+      const hits = raycaster.intersectObject(modelRoot, true);
+      const hit = hits[0];
+      if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
+      else onEmptyClick?.();
+    } else {
+      onEmptyClick?.();
+    }
   });
 
   let initialViewState: InitialViewState | null = null;
@@ -247,26 +347,38 @@ export function createViewer({
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO),
+    );
     renderer.setSize(width, height, false);
   };
 
-  const animate = () => {
+  let lastFrameTime = 0;
+  const animate = (time = 0) => {
     if (destroyed) return;
 
+    const deltaTime =
+      lastFrameTime > 0
+        ? Math.min((time - lastFrameTime) / 1000, MAX_FRAME_DELTA_SECONDS)
+        : DEFAULT_FRAME_DELTA_SECONDS;
+    lastFrameTime = time;
+
     if (camAnim) {
-      camAnim.progress = Math.min(camAnim.progress + 0.028, 1);
+      camAnim.progress = Math.min(
+        camAnim.progress + deltaTime / CAMERA_ANIMATION_DURATION_SECONDS,
+        1,
+      );
       const t = easeInOutCubic(camAnim.progress);
       camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, t);
       controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, t);
-      controls.update();
+      controls.update(deltaTime);
       if (camAnim.progress >= 1) {
         const cb = camAnim.onComplete;
         camAnim = null;
         cb?.();
       }
     } else {
-      controls.update();
+      controls.update(deltaTime);
     }
 
     updateTrackedLabels();
@@ -276,7 +388,6 @@ export function createViewer({
   renderer.setAnimationLoop(animate);
   resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(mount);
-  window.addEventListener('resize', resize);
   resize();
 
   const stopAutoRotateOnInteract = () => {
@@ -287,7 +398,7 @@ export function createViewer({
     setAutoRotate(false);
   };
 
-  controls.addEventListener('start', stopAutoRotateOnInteract);
+  controls.addEventListener("start", stopAutoRotateOnInteract);
 
   function setStatus(status: ViewerStatus) {
     onStatusChange?.(status);
@@ -296,6 +407,15 @@ export function createViewer({
   function setAutoRotate(enabled: boolean) {
     controls.autoRotate = enabled;
     onAutoRotateChange?.(enabled);
+  }
+
+  function requestShadowMapUpdate() {
+    if (!config.model.enableShadows) {
+      return;
+    }
+
+    renderer.shadowMap.needsUpdate = true;
+    directionalLight.shadow.needsUpdate = true;
   }
 
   async function load(): Promise<void> {
@@ -312,11 +432,11 @@ export function createViewer({
   }
 
   async function loadModel() {
-    setStatus('loading');
+    setStatus("loading");
     onProgress?.({
       loaded: 0,
       total: 0,
-      progress: 0
+      progress: 0,
     });
 
     try {
@@ -334,72 +454,127 @@ export function createViewer({
       }
 
       modelRoot = gltf.scene;
-      modelRoot.name = 'LeHongPhongCampus';
+      modelRoot.name = "LeHongPhongCampus";
 
       applyModelTransform(modelRoot, config);
+      const modelEdges = createMergedModelEdges(modelRoot, config);
+      optimizeStaticMeshes(modelRoot);
       applyShadowSettings(modelRoot, config.model.enableShadows);
+      if (modelEdges) {
+        modelRoot.add(modelEdges);
+      }
 
       scene.add(modelRoot);
 
       const bounds = new Box3().setFromObject(modelRoot);
 
       if (bounds.isEmpty()) {
-        throw new Error('Model loaded but did not contain visible geometry.');
+        throw new Error("Model loaded but did not contain visible geometry.");
       }
 
       fitCameraToBounds(bounds);
+      updateSunLight(bounds);
       updateGround(bounds);
+      requestShadowMapUpdate();
 
       onProgress?.({
         loaded: 1,
         total: 1,
-        progress: 1
+        progress: 1,
       });
-      setStatus('ready');
+      setStatus("ready");
     } catch (error) {
       const message = mapViewerError(error, config);
-      setStatus('error');
+      setStatus("error");
       onError?.(message);
       throw error;
     }
   }
 
   function fitCameraToBounds(bounds: Box3) {
-    const center = bounds.getCenter(new Vector3());
+    // Đọc orbitTarget từ config hoặc dùng tâm bounding box làm fallback
+    const orbitTarget = config.controls.orbitTarget
+      ? new Vector3(...config.controls.orbitTarget)
+      : bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
     const maxDimension = Math.max(size.x, size.y, size.z);
     const radius = maxDimension / 2;
-    const fitOffset = config.model.fitPadding;
+    const fitPadding = config.model.fitPadding;
     const fovInRadians = MathUtils.degToRad(camera.fov);
-    const fitHeightDistance = radius / Math.tan(fovInRadians / 2);
-    const fitWidthDistance = fitHeightDistance / camera.aspect;
-    const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+    const verticalFitDistance = radius / Math.tan(fovInRadians / 2);
+    const horizontalFitDistance = verticalFitDistance / camera.aspect;
+    // fitDistance là khoảng cách từ camera đến tâm orbit, để toàn bộ model nằm trong view
+    const fitDistance =
+      fitPadding * Math.max(verticalFitDistance, horizontalFitDistance);
 
+    // Giới hạn khoảng cách camera để tránh zoom quá gần hoặc quá xa
+    const minDistance = fitDistance * 0.1;
+    const maxDistance = fitDistance;
+    const initialDistance = maxDistance / 2;
+
+    // Hướng đặt camera ban đầu so với tâm orbit, lấy từ config viewer-config.ts, fitDirection: [1.25, 0.72, 1.4]
+    // .normalize() biến vector này thành vector đơn vị, nên độ lớn không quan trọng, chỉ quan trọng tỉ lệ giữa x/y/z
     const fitDirection = new Vector3(...config.camera.fitDirection).normalize();
-    const nextPosition = fitDirection.multiplyScalar(distance).add(center);
+
+    // nextPosition là vị trí camera ban đầu, thực tế trong world space
+    // nextPosition = hướng * khoảng cách + tâm orbit
+    const nextPosition = fitDirection
+      .multiplyScalar(initialDistance)
+      .add(orbitTarget);
 
     camera.position.copy(nextPosition);
-    camera.near = Math.max(distance / CAMERA_NEAR_DIVISOR, 0.01);
-    camera.far = Math.max(distance * CAMERA_FAR_MULTIPLIER, config.camera.far);
+    // vật thể gần camera hơn khoảng này sẽ không được render.
+    camera.near = Math.max(fitDistance / CAMERA_NEAR_DIVISOR, 0.01);
+    // vật thể xa camera hơn khoảng này sẽ không được render.
+    camera.far = Math.max(
+      fitDistance * CAMERA_FAR_MULTIPLIER,
+      config.camera.far,
+    );
     camera.updateProjectionMatrix();
 
-    controls.target.copy(center);
-    controls.minDistance = Math.max(radius * 0.45, 0.5);
-    controls.maxDistance = Math.max(radius * 8, 20);
+    // Trục orbit thật nằm ở đây
+    controls.target.copy(orbitTarget);
+    controls.minDistance = minDistance;
+    controls.maxDistance = maxDistance;
     controls.update();
 
+    // Lưu trạng thái view ban đầu để reset khi bấm button reset
     initialViewState = {
       position: nextPosition.clone(),
-      target: center.clone()
+      target: orbitTarget.clone(),
     };
 
+    if (scene.fog instanceof Fog) {
+      scene.fog.near = Math.max(fitDistance * 0.8, 10);
+      scene.fog.far = Math.max(fitDistance * 4.5, 50);
+    }
+  }
+
+  function updateSunLight(bounds: Box3) {
+    const center = bounds.getCenter(new Vector3());
+    const size = bounds.getSize(new Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z);
+    const sunDirection = sketchUpSunDirectionToThree(
+      config.scene.lights.sketchUpSunDirection,
+    );
+    const lightDistance = Math.max(maxDimension * 2, MIN_SUN_DISTANCE);
+    const shadowExtent = Math.max(maxDimension * 0.75, MIN_SHADOW_EXTENT);
+    const shadowCamera = directionalLight.shadow.camera;
+
+    directionalLight.position
+      .copy(center)
+      .addScaledVector(sunDirection, lightDistance);
     directionalLight.target.position.copy(center);
     directionalLight.target.updateMatrixWorld();
 
-    if (scene.fog) {
-      scene.fog.near = Math.max(distance * 0.8, 10);
-      scene.fog.far = Math.max(distance * 4.5, 50);
-    }
+    shadowCamera.near = 0.1;
+    shadowCamera.far = Math.max(lightDistance + maxDimension * 2, 100);
+    shadowCamera.left = -shadowExtent;
+    shadowCamera.right = shadowExtent;
+    shadowCamera.top = shadowExtent;
+    shadowCamera.bottom = -shadowExtent;
+    shadowCamera.updateProjectionMatrix();
+    directionalLight.shadow.needsUpdate = true;
   }
 
   function updateGround(bounds: Box3) {
@@ -409,10 +584,12 @@ export function createViewer({
 
     const center = bounds.getCenter(new Vector3());
     const size = bounds.getSize(new Vector3());
-    const diameter = Math.max(size.x, size.z) * 2.3;
+    const diameter = Math.max(size.x, size.z) * 1.2;
 
     ground.scale.setScalar(Math.max(diameter, 12));
+    // Tự động định vị ground ở tâm X, Z của mô hình, và dưới chân mô hình (bounds.min.y) một khoảng nhỏ
     ground.position.set(center.x, bounds.min.y - 0.02, center.z);
+    ground.visible = config.model.enableGround;
   }
 
   function zoomIn() {
@@ -444,8 +621,7 @@ export function createViewer({
     renderer.setAnimationLoop(null);
     resizeObserver?.disconnect();
     resizeObserver = null;
-    window.removeEventListener('resize', resize);
-    controls.removeEventListener('start', stopAutoRotateOnInteract);
+    controls.removeEventListener("start", stopAutoRotateOnInteract);
     controls.dispose();
 
     if (modelRoot) {
@@ -470,11 +646,11 @@ export function createViewer({
     zoomOut,
     setLabels,
     focusOnPoint,
-    destroy
+    destroy,
   };
 
   function loadGltfWithProgress(
-    handleProgress: (progress: LoadingProgress) => void
+    handleProgress: (progress: LoadingProgress) => void,
   ): Promise<GLTF> {
     return new Promise((resolve, reject) => {
       gltfLoader.load(
@@ -488,10 +664,10 @@ export function createViewer({
           handleProgress({
             loaded,
             total,
-            progress
+            progress,
           });
         },
-        reject
+        reject,
       );
     });
   }
@@ -518,24 +694,271 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
   });
 }
 
-function disposeObject(root: Object3D) {
+function createMergedModelEdges(
+  root: Object3D,
+  config: ViewerConfig,
+): LineSegments | null {
+  const edgeConfig = config.model.edges;
+
+  if (!edgeConfig?.enabled) {
+    return null;
+  }
+
+  root.updateMatrixWorld(true);
+
+  const rootInverse = new Matrix4().copy(root.matrixWorld).invert();
+  const meshToRoot = new Matrix4();
+  const edgeGeometries: BufferGeometry[] = [];
+
   root.traverse((child: Object3D) => {
-    if (!(child instanceof Mesh)) {
+    if (!(child instanceof Mesh) || !child.visible) {
       return;
     }
 
-    child.geometry.dispose();
+    const position = child.geometry.getAttribute("position");
+    if (!position) {
+      return;
+    }
+
+    const edges = new EdgesGeometry(
+      child.geometry,
+      edgeConfig.thresholdAngle ?? DEFAULT_EDGE_THRESHOLD_ANGLE,
+    );
+
+    meshToRoot.multiplyMatrices(rootInverse, child.matrixWorld);
+    edges.applyMatrix4(meshToRoot);
+    edgeGeometries.push(edges);
+  });
+
+  if (edgeGeometries.length === 0) {
+    return null;
+  }
+
+  const geometry =
+    edgeGeometries.length === 1
+      ? edgeGeometries[0]
+      : mergeGeometries(edgeGeometries, false);
+
+  if (!geometry) {
+    edgeGeometries.forEach((edgeGeometry) => edgeGeometry.dispose());
+    return null;
+  }
+
+  if (edgeGeometries.length > 1) {
+    edgeGeometries.forEach((edgeGeometry) => edgeGeometry.dispose());
+  }
+
+  const opacity = edgeConfig.opacity ?? DEFAULT_EDGE_OPACITY;
+  const material = new LineBasicMaterial({
+    color: new Color(edgeConfig.color ?? DEFAULT_EDGE_COLOR),
+    transparent: opacity < 1,
+    opacity,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const edgeLines = new LineSegments(geometry, material);
+  edgeLines.name = MODEL_EDGE_NAME;
+  edgeLines.matrixAutoUpdate = false;
+  edgeLines.renderOrder = 1;
+  edgeLines.raycast = DISABLED_RAYCAST;
+
+  return edgeLines;
+}
+
+function optimizeStaticMeshes(root: Object3D) {
+  root.updateMatrixWorld(true);
+
+  const rootInverse = new Matrix4().copy(root.matrixWorld).invert();
+  const meshToRoot = new Matrix4();
+  const buckets = new Map<string, StaticMeshBucket>();
+  const renderableMeshes: Mesh[] = [];
+
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh) || !child.visible) {
+      return;
+    }
+
+    renderableMeshes.push(child);
+
+    if (!isMergeableStaticMesh(child)) {
+      return;
+    }
+
+    const material = child.material as Material;
+    const key = `${material.uuid}:${getGeometryMergeSignature(child.geometry)}`;
+    let bucket = buckets.get(key);
+
+    if (!bucket) {
+      bucket = {
+        geometries: [],
+        material,
+        sourceMeshes: [],
+      };
+      buckets.set(key, bucket);
+    }
+
+    const geometry = child.geometry.clone();
+    meshToRoot.multiplyMatrices(rootInverse, child.matrixWorld);
+    geometry.applyMatrix4(meshToRoot);
+    bucket.geometries.push(geometry);
+    bucket.sourceMeshes.push(child);
+  });
+
+  if (buckets.size === 0) {
+    return;
+  }
+
+  const optimizedRoot = new Group();
+  optimizedRoot.name = MERGED_MODEL_NAME;
+  optimizedRoot.matrixAutoUpdate = false;
+  const mergedSourceMeshes = new Set<Mesh>();
+
+  for (const bucket of buckets.values()) {
+    const geometry =
+      bucket.geometries.length === 1
+        ? bucket.geometries[0]
+        : mergeGeometries(bucket.geometries, false);
+
+    if (!geometry) {
+      bucket.geometries.forEach((bucketGeometry) => bucketGeometry.dispose());
+      continue;
+    }
+
+    if (bucket.geometries.length > 1) {
+      bucket.geometries.forEach((bucketGeometry) => bucketGeometry.dispose());
+    }
+
+    const mesh = new Mesh(geometry, bucket.material);
+    mesh.name = MERGED_MESH_NAME;
+    mesh.matrixAutoUpdate = false;
+    optimizedRoot.add(mesh);
+    bucket.sourceMeshes.forEach((sourceMesh) =>
+      mergedSourceMeshes.add(sourceMesh),
+    );
+  }
+
+  if (optimizedRoot.children.length === 0) {
+    return;
+  }
+
+  const sourceGeometries = new Set<BufferGeometry>();
+  for (const mesh of mergedSourceMeshes) {
+    sourceGeometries.add(mesh.geometry);
+  }
+
+  if (mergedSourceMeshes.size === renderableMeshes.length) {
+    root.clear();
+  } else {
+    for (const mesh of mergedSourceMeshes) {
+      mesh.parent?.remove(mesh);
+    }
+    pruneEmptyBranches(root);
+  }
+
+  for (const geometry of sourceGeometries) {
+    geometry.dispose();
+  }
+
+  root.add(optimizedRoot);
+  root.updateMatrixWorld(true);
+}
+
+function isMergeableStaticMesh(mesh: Mesh): boolean {
+  if (Array.isArray(mesh.material)) {
+    return false;
+  }
+
+  if (mesh.material.transparent) {
+    return false;
+  }
+
+  if ((mesh as any).isSkinnedMesh || mesh.morphTargetInfluences) {
+    return false;
+  }
+
+  return Boolean(mesh.geometry.getAttribute("position"));
+}
+
+function getGeometryMergeSignature(geometry: BufferGeometry) {
+  const attributes = Object.keys(geometry.attributes)
+    .sort()
+    .map((name) => {
+      const attribute = geometry.getAttribute(name);
+      const array = (attribute as any).array ?? (attribute as any).data?.array;
+      const arrayName = array?.constructor.name ?? "unknown";
+      return `${name}:${attribute.itemSize}:${attribute.normalized}:${arrayName}`;
+    })
+    .join("|");
+  const morphAttributes = Object.keys(geometry.morphAttributes)
+    .sort()
+    .join(",");
+  return [
+    `indexed:${Boolean(geometry.index)}`,
+    `attrs:${attributes}`,
+    `morph:${morphAttributes}`,
+  ].join("|");
+}
+
+function pruneEmptyBranches(root: Object3D) {
+  for (let index = root.children.length - 1; index >= 0; index -= 1) {
+    const child = root.children[index];
+    pruneEmptyBranches(child);
+
+    if (
+      child.children.length === 0 &&
+      !(child instanceof Mesh) &&
+      !(child instanceof LineSegments)
+    ) {
+      root.remove(child);
+    }
+  }
+}
+
+function sketchUpSunDirectionToThree(
+  sketchUpDirection: [number, number, number],
+) {
+  const [x, y, z] = sketchUpDirection;
+  // SketchUp is Z-up; glTF/Three.js is Y-up.
+  const direction = new Vector3(x, z, -y);
+
+  if (direction.lengthSq() === 0) {
+    return new Vector3(0, 1, 0);
+  }
+
+  return direction.normalize();
+}
+
+function disposeObject(root: Object3D) {
+  const geometries = new Set<BufferGeometry>();
+  const materials = new Set<Material>();
+
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh) && !(child instanceof LineSegments)) {
+      return;
+    }
+
+    geometries.add(child.geometry);
 
     if (Array.isArray(child.material)) {
-      child.material.forEach(disposeMaterial);
+      child.material.forEach((material) => materials.add(material));
       return;
     }
 
-    disposeMaterial(child.material);
+    materials.add(child.material);
   });
+
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach(disposeMaterial);
 }
 
 function disposeMaterial(material: Material) {
+  // Giải phóng các texture của material để tránh rò rỉ bộ nhớ GPU
+  for (const key of Object.keys(material)) {
+    const value = (material as any)[key];
+    if (value && typeof value.dispose === "function" && value.isTexture) {
+      value.dispose();
+    }
+  }
   material.dispose();
 }
 
@@ -543,7 +966,7 @@ function mapViewerError(error: unknown, config: ViewerConfig) {
   const rawMessage = error instanceof Error ? error.message : String(error);
   const normalized = rawMessage.toLowerCase();
 
-  if (normalized.includes('draco') || normalized.includes('decoder')) {
+  if (normalized.includes("draco") || normalized.includes("decoder")) {
     return `${config.ui.decoderLoadError} (${rawMessage})`;
   }
 
@@ -553,4 +976,3 @@ function mapViewerError(error: unknown, config: ViewerConfig) {
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
-
