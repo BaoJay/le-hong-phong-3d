@@ -1,9 +1,12 @@
 import "./styles.css";
+import { inject } from "@vercel/analytics";
 import { BUILDINGS } from "./data/buildings";
 import { createInfoPanel } from "./ui/info-panel";
 import { formatFileSize } from "./utils/format";
 import { viewerConfig } from "./config/viewer-config";
 import { createViewer } from "./viewer/createViewer";
+
+inject();
 
 // ── DOM queries ───────────────────────────────────────────────────────────────
 function requireElement<T extends HTMLElement>(id: string): T {
