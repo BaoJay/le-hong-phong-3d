@@ -1,0 +1,444 @@
+/* ─── Onboarding intro ───────────────────────────────────────────────────────
+   Scroll-driven intro that plays while the 18.5 MB campus GLB downloads.
+   Ported from the designer's prototype: what the prototype held as inline
+   styles lives here as classes, and the JS only writes the properties it
+   animates per frame (transform / opacity / color).
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: "Libertinus Serif", Georgia, "Times New Roman", serif;
+  opacity: 1;
+  transition: opacity 700ms ease;
+}
+
+/* Fading out hands the viewport over to the real page underneath. */
+.onboarding.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.onboarding__scroller {
+  position: absolute;
+  inset: 0;
+  /* JS flips this to `auto` once the counter finishes. */
+  overflow: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.onboarding__scroller::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.onboarding__track {
+  position: relative;
+  height: 1000vh;
+}
+
+.onboarding__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* ─── Year counter — doubles as the model download progress ──────────────── */
+.ob-years {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  perspective: 760px;
+  perspective-origin: 50% 50%;
+}
+
+.ob-years__reel {
+  position: relative;
+  width: 100%;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.ob-year {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1em;
+  margin-top: -0.5em;
+  text-align: center;
+  font-size: min(21vh, 13.5vw);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  backface-visibility: hidden;
+}
+
+/* ─── Download caption — bottom centre, under the reel ───────────────────── */
+.ob-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: "Inter", sans-serif;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  pointer-events: none;
+}
+
+.ob-caption.is-visible {
+  opacity: 1;
+}
+
+/* With the reel retired there is nothing left to sit under, so the failure
+   message takes the centre. */
+.onboarding.is-error .ob-caption {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.ob-caption__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.ob-caption__bytes {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: #b0b0b0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ob-caption__bytes--error {
+  color: #a3401f;
+}
+
+.ob-caption__retry {
+  pointer-events: auto;
+  margin-top: 0.3rem;
+  border: 1px solid #d4d4d4;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 0.45rem 1.1rem;
+  transition: border-color 200ms ease;
+}
+
+.ob-caption__retry:hover {
+  border-color: #9c9c9c;
+}
+
+/* ─── Logo ───────────────────────────────────────────────────────────────── */
+.ob-logo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ob-logo img {
+  display: block;
+  width: min(210px, 26vw);
+  height: auto;
+}
+
+/* ─── Scroll hint ────────────────────────────────────────────────────────── */
+.ob-scroll-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5.5vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "Inter", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9c9c9c;
+  opacity: 0;
+  transition: opacity 600ms ease;
+  pointer-events: none;
+}
+
+.ob-scroll-hint.is-visible {
+  opacity: 1;
+}
+
+.ob-scroll-hint svg {
+  display: block;
+  animation: ob-nudge 2.2s ease-in-out infinite;
+}
+
+@keyframes ob-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+/* ─── Floating photo gallery ─────────────────────────────────────────────── */
+.ob-gallery {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ob-photo {
+  position: absolute;
+  opacity: 0;
+  will-change: transform;
+  pointer-events: auto;
+  filter: grayscale(1);
+  transition: filter 500ms ease;
+}
+
+.ob-photo:hover {
+  filter: grayscale(0);
+}
+
+.ob-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ─── Roof plate — rides up 1:1 with the scroll ──────────────────────────── */
+.ob-roof {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 170vh;
+  background-image: url("/onboarding/roof.jpg");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  transform: translate3d(0, 170vh, 0);
+  will-change: transform;
+}
+
+/* ─── Headline — word-by-word colour wipe ────────────────────────────────── */
+.ob-headline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding-top: 17vh;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: min(8.1vh, 5.1vw);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  transform: translate3d(0, 95vh, 0);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.ob-headline__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.26em;
+  justify-content: center;
+}
+
+.ob-headline__line--tight {
+  gap: 0 0.18em;
+  align-items: center;
+}
+
+.ob-word {
+  color: #e2e2e2;
+}
+
+.ob-petal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.6em;
+  height: 0.72em;
+  opacity: 0;
+}
+
+.ob-petal img {
+  display: block;
+  width: 0.62em;
+  height: auto;
+  transform: rotate(95deg);
+}
+
+/* ─── Closing prompt ─────────────────────────────────────────────────────── */
+.ob-prompt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4.2vh;
+  padding-top: 5vh;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ob-prompt__copy {
+  text-align: center;
+  text-transform: uppercase;
+  font-size: min(5.4vh, 3.4vw);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.ob-prompt__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.24em;
+  justify-content: center;
+}
+
+.ob-prompt__word {
+  display: inline-block;
+}
+
+.ob-prompt__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  opacity: 0;
+}
+
+.ob-btn {
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 20px;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
+}
+
+.ob-btn--primary {
+  background: #5e4a0e;
+  color: #ffffff;
+}
+
+.ob-btn--primary:hover {
+  background: #6e5811;
+}
+
+.ob-btn--ghost {
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 1px solid #d4d4d4;
+  padding: 8px 18px;
+}
+
+.ob-btn--ghost:hover {
+  border-color: #9c9c9c;
+}
+
+/* ─── Skip control ───────────────────────────────────────────────────────── */
+.ob-skip {
+  position: absolute;
+  top: 1.6rem;
+  right: 1.8rem;
+  z-index: 3;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #666;
+  font-family: "Inter", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.4rem 0.95rem;
+  opacity: 0;
+  transition:
+    opacity 400ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+  pointer-events: none;
+}
+
+.ob-skip.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ob-skip:hover {
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.32);
+}
+
+/* ─── Reduced motion — no scroll journey, just counter → enter ───────────── */
+.onboarding--reduced .onboarding__track {
+  height: 100vh;
+}
+
+.onboarding--reduced .ob-gallery,
+.onboarding--reduced .ob-roof,
+.onboarding--reduced .ob-headline,
+.onboarding--reduced .ob-scroll-hint {
+  display: none;
+}
+
+.onboarding--reduced .ob-year {
+  filter: none !important;
+}
+
+.onboarding--reduced .ob-enter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7vh;
+  display: flex;
+  justify-content: center;
+}
+
+/* ─── Small screens ──────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .ob-headline {
+    font-size: min(7vh, 8.6vw);
+    padding-top: 20vh;
+  }
+
+  .ob-prompt__copy {
+    font-size: min(4.6vh, 6.4vw);
+  }
+
+  .ob-skip {
+    top: 1rem;
+    right: 1rem;
+  }
+}
