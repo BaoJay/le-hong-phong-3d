@@ -12,7 +12,9 @@
   overflow: hidden;
   background: #ffffff;
   color: #1a1a1a;
-  font-family: "Libertinus Serif", Georgia, "Times New Roman", serif;
+  font-family: "Libertinus Serif Display", Georgia, "Times New Roman", serif;
+  font-style: normal;
+  font-weight: 400;
   opacity: 1;
   transition: opacity 700ms ease;
 }
@@ -246,7 +248,7 @@
   will-change: transform;
 }
 
-/* ─── Headline — word-by-word colour wipe ────────────────────────────────── */
+/* ─── Headline — phrase-by-phrase colour wipe ────────────────────────────────── */
 .ob-headline {
   position: absolute;
   left: 0;
@@ -256,7 +258,7 @@
   text-align: center;
   text-transform: uppercase;
   font-size: min(8.1vh, 5.1vw);
-  line-height: 0.95;
+  line-height: 1.12;
   letter-spacing: -0.05em;
   transform: translate3d(0, 95vh, 0);
   will-change: transform;
@@ -275,7 +277,7 @@
   align-items: center;
 }
 
-.ob-word {
+.ob-phrase {
   color: #e2e2e2;
 }
 
@@ -313,7 +315,7 @@
   text-align: center;
   text-transform: uppercase;
   font-size: min(5.4vh, 3.4vw);
-  line-height: 1.06;
+  line-height: 1.15;
   letter-spacing: -0.035em;
 }
 
@@ -324,7 +326,7 @@
   justify-content: center;
 }
 
-.ob-prompt__word {
+.ob-prompt__phrase {
   display: inline-block;
 }
 

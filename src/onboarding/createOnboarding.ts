@@ -17,55 +17,128 @@ interface PhotoDef {
 }
 
 const PHOTOS: readonly PhotoDef[] = [
-  { src: "3.jpg",  depth: 3,   dir:  1, left: "67.57%", top: "-11.3%",  width: "19.79%", height: "48.15%" },
-  { src: "5.jpg",  depth: 2,   dir: -1, left: "-5.78%", top: "34.8%",   width: "23.26%", height: "25.11%" },
-  { src: "13.jpg", depth: 3,   dir: -1, left: "4.1%",   top: "70.91%",  width: "19.65%", height: "47.82%" },
-  { src: "7.jpg",  depth: 2.6, dir:  1, left: "61.8%",  top: "68.39%",  width: "18.01%", height: "43.89%" },
-  { src: "12.jpg", depth: 2.4, dir:  1, left: "84.79%", top: "64.75%",  width: "16.25%", height: "39.54%" },
-  { src: "17.jpg", depth: 1.2, dir:  1, left: "91.04%", top: "9.98%",   width: "16.6%",  height: "17.94%" },
-  { src: "14.jpg", depth: 0.9, dir: -1, left: "17.29%", top: "6.53%",   width: "11.67%", height: "12.61%" },
-  { src: "11.jpg", depth: 2.2, dir: -1, left: "23.26%", top: "-27.7%",  width: "16.67%", height: "40.55%" },
-  { src: "16.jpg", depth: 1.4, dir:  1, left: "74.93%", top: "45.81%",  width: "10.21%", height: "24.94%" },
-  { src: "10.jpg", depth: 0.7, dir:  1, left: "47.64%", top: "84.32%",  width: "9.72%",  height: "10.51%" },
-  { src: "6.jpg",  depth: 0.5, dir: -1, left: "15.47%", top: "43.69%",  width: "7.81%",  height: "8.45%"  },
+  {
+    src: "3.jpg",
+    depth: 3,
+    dir: 1,
+    left: "67.57%",
+    top: "-11.3%",
+    width: "19.79%",
+    height: "48.15%",
+  },
+  {
+    src: "5.jpg",
+    depth: 2,
+    dir: -1,
+    left: "-5.78%",
+    top: "34.8%",
+    width: "23.26%",
+    height: "25.11%",
+  },
+  {
+    src: "13.jpg",
+    depth: 3,
+    dir: -1,
+    left: "4.1%",
+    top: "70.91%",
+    width: "19.65%",
+    height: "47.82%",
+  },
+  {
+    src: "7.jpg",
+    depth: 2.6,
+    dir: 1,
+    left: "61.8%",
+    top: "68.39%",
+    width: "18.01%",
+    height: "43.89%",
+  },
+  {
+    src: "12.jpg",
+    depth: 2.4,
+    dir: 1,
+    left: "84.79%",
+    top: "64.75%",
+    width: "16.25%",
+    height: "39.54%",
+  },
+  {
+    src: "17.jpg",
+    depth: 1.2,
+    dir: 1,
+    left: "91.04%",
+    top: "9.98%",
+    width: "16.6%",
+    height: "17.94%",
+  },
+  {
+    src: "14.jpg",
+    depth: 0.9,
+    dir: -1,
+    left: "17.29%",
+    top: "6.53%",
+    width: "11.67%",
+    height: "12.61%",
+  },
+  {
+    src: "11.jpg",
+    depth: 2.2,
+    dir: -1,
+    left: "23.26%",
+    top: "-27.7%",
+    width: "16.67%",
+    height: "40.55%",
+  },
+  {
+    src: "16.jpg",
+    depth: 1.4,
+    dir: 1,
+    left: "74.93%",
+    top: "45.81%",
+    width: "10.21%",
+    height: "24.94%",
+  },
+  {
+    src: "10.jpg",
+    depth: 0.7,
+    dir: 1,
+    left: "47.64%",
+    top: "84.32%",
+    width: "9.72%",
+    height: "10.51%",
+  },
+  {
+    src: "6.jpg",
+    depth: 0.5,
+    dir: -1,
+    left: "15.47%",
+    top: "43.69%",
+    width: "7.81%",
+    height: "8.45%",
+  },
 ];
 
-/** `null` marks the petal slot inside the "1927 · 2027." line. */
+/** Keep each phrase intact; `null` marks the petal in the year line. */
 const HEADLINE_LINES: readonly (readonly (string | null)[])[] = [
-  ["100", "Năm"],
-  ["Lê", "Hồng", "Phong"],
+  ["100 Năm"],
+  ["Lê Hồng Phong"],
   ["1927", null, "2027."],
-  ["Một", "thế", "kỷ"],
-  ["di", "sản", "và", "tri", "thức."],
+  ["Một thế kỷ"],
+  ["di sản và tri thức."],
 ];
 
 const PROMPT_LINES: readonly (readonly string[])[] = [
-  ["bạn", "có", "muốn", "ĐỂ"],
-  ["LẠI", "một", "lời", "nhắn", "?"],
+  ["bạn có muốn ĐỂ"],
+  ["LẠI một lời nhắn?"],
 ];
-
-// The Google/Fontsource web build of Libertinus Serif ships blank glyphs for
-// every precomposed Vietnamese letter carrying circumflex/breve/horn PLUS a
-// second mark. Each renders correctly as base + combining mark instead.
-const GLYPH_FIX: Record<string, string> = {
-  "Ẩ": "Ẩ", "ẩ": "ẩ", "ẫ": "ẫ",
-  "Ậ": "Ậ", "ậ": "ậ",
-  "Ẳ": "Ả̆", "ẳ": "ả̆", "ẵ": "ã̆",
-  "Ặ": "Ặ", "ặ": "ặ",
-  "ể": "ể", "ễ": "ễ",
-  "Ệ": "Ệ", "ệ": "ệ",
-  "Ổ": "Ổ", "ổ": "ổ", "ỗ": "ỗ",
-  "Ộ": "Ộ", "ộ": "ộ",
-};
-const GLYPH_RE = new RegExp("[" + Object.keys(GLYPH_FIX).join("") + "]", "g");
 
 /* ─── Timing ───────────────────────────────────────────────────────────────── */
 
-const T_FADE_IN = 650;          // year reel fades in
+const T_FADE_IN = 650; // year reel fades in
 const T_HOLD = T_FADE_IN + 400; // beat before the counter starts running
-const MIN_RUN_MS = 2400;        // floor on the 1927→2027 run, so a cached model still reads
-const T_REST = 400;             // beat after the counter lands on 2027
-const LEAVE_MS = 700;           // cross-fade into the live page
+const MIN_RUN_MS = 2400; // floor on the 1927→2027 run, so a cached model still reads
+const T_REST = 400; // beat after the counter lands on 2027
+const LEAVE_MS = 700; // cross-fade into the live page
 
 /** Year slots rendered either side of the current index. */
 const SLOT_COUNT = 9;
@@ -128,20 +201,23 @@ export function createOnboarding({
 
   const headlineHtml = HEADLINE_LINES.map((line) => {
     const tight = line.includes(null);
-    const words = line
-      .map((word) =>
-        word === null
+    const phrases = line
+      .map((phrase) =>
+        phrase === null
           ? `<span class="ob-petal"><img src="${baseUrl}onboarding/petal.png" alt="" /></span>`
-          : `<span class="ob-word">${word}</span>`,
+          : `<span class="ob-phrase">${phrase.normalize("NFC")}</span>`,
       )
       .join("");
-    return `<div class="ob-headline__line${tight ? " ob-headline__line--tight" : ""}">${words}</div>`;
+    return `<div class="ob-headline__line${tight ? " ob-headline__line--tight" : ""}">${phrases}</div>`;
   }).join("");
 
   const promptHtml = PROMPT_LINES.map(
     (line) =>
       `<div class="ob-prompt__line">${line
-        .map((word) => `<span class="ob-prompt__word">${word}</span>`)
+        .map(
+          (phrase) =>
+            `<span class="ob-prompt__phrase">${phrase.normalize("NFC")}</span>`,
+        )
         .join("")}</div>`,
   ).join("");
 
@@ -228,25 +304,30 @@ export function createOnboarding({
   };
 
   const slots = Array.from(root.querySelectorAll<HTMLElement>(".ob-year"));
-  const words = Array.from(root.querySelectorAll<HTMLElement>(".ob-word"));
+  const phrases = Array.from(root.querySelectorAll<HTMLElement>(".ob-phrase"));
   const petal = root.querySelector<HTMLElement>(".ob-petal");
-  const promptWords = Array.from(root.querySelectorAll<HTMLElement>(".ob-prompt__word"));
-  const photos = Array.from(root.querySelectorAll<HTMLElement>(".ob-photo")).map((node, i) => ({
+  const promptPhrases = Array.from(
+    root.querySelectorAll<HTMLElement>(".ob-prompt__phrase"),
+  );
+  const photos = Array.from(
+    root.querySelectorAll<HTMLElement>(".ob-photo"),
+  ).map((node, i) => ({
     node,
     depth: PHOTOS[i].depth,
     dir: PHOTOS[i].dir,
   }));
-  const enterReduced = root.querySelector<HTMLButtonElement>('[data-ob="enter-reduced"]');
+  const enterReduced = root.querySelector<HTMLButtonElement>(
+    '[data-ob="enter-reduced"]',
+  );
 
-  fixGlyphs(root);
   document.body.appendChild(root);
 
   /* ── State ───────────────────────────────────────────────────────────────── */
 
-  let elapsed = 0;          // ms since the intro began
-  let last = 0;             // previous rAF timestamp
-  let yearIdx = 0;          // 0..100 — the animated year cursor
-  let progressTarget = 0;   // 0..100 — where the download says the cursor should be
+  let elapsed = 0; // ms since the intro began
+  let last = 0; // previous rAF timestamp
+  let yearIdx = 0; // 0..100 — the animated year cursor
+  let progressTarget = 0; // 0..100 — where the download says the cursor should be
   let indeterminate = true; // no Content-Length yet
   let modelReady = false;
   let errored = false;
@@ -257,13 +338,17 @@ export function createOnboarding({
   let raf = 0;
 
   // Eased pointer for the gallery parallax.
-  let mx = 0, my = 0, tmx = 0, tmy = 0;
+  let mx = 0,
+    my = 0,
+    tmx = 0,
+    tmy = 0;
 
   // Change guards, so a still frame writes nothing.
   let lastYearsOpacity = -1;
   let lastScroll = -1;
   let lastLogoIn = -1;
-  let lastMx = 0, lastMy = 0;
+  let lastMx = 0,
+    lastMy = 0;
 
   /* ── Interaction ─────────────────────────────────────────────────────────── */
 
@@ -320,11 +405,16 @@ export function createOnboarding({
     // frame when the GLB is already in cache.
     const runT = clamp((t - T_HOLD) / MIN_RUN_MS);
     const pacedCeiling =
-      100 * (runT < 0.5 ? 4 * runT * runT * runT : 1 - Math.pow(-2 * runT + 2, 3) / 2);
+      100 *
+      (runT < 0.5
+        ? 4 * runT * runT * runT
+        : 1 - Math.pow(-2 * runT + 2, 3) / 2);
 
     // Until the model is actually ready the cursor stalls just shy of 2027, so
     // the landing always coincides with the campus being on screen.
-    const cap = modelReady ? 100 : Math.min(indeterminate ? 95 : progressTarget, 99.2);
+    const cap = modelReady
+      ? 100
+      : Math.min(indeterminate ? 95 : progressTarget, 99.2);
     const target = Math.min(cap, pacedCeiling);
     yearIdx += (target - yearIdx) * (1 - Math.pow(0.88, dt * 60));
 
@@ -378,7 +468,8 @@ export function createOnboarding({
           const text = String(1927 + yi);
           if (slot.textContent !== text) slot.textContent = text;
           slot.style.opacity = String(clamp(1 - ad * 0.3) * (ad > 3.3 ? 0 : 1));
-          slot.style.filter = ad > 0.06 ? `blur(${(ad * 1.2).toFixed(2)}px)` : "none";
+          slot.style.filter =
+            ad > 0.06 ? `blur(${(ad * 1.2).toFixed(2)}px)` : "none";
           slot.style.transform = `rotateX(${(-d * step).toFixed(3)}deg) translateZ(${radius.toFixed(1)}px)`;
         }
       }
@@ -416,13 +507,17 @@ export function createOnboarding({
     /* ── Scroll, measured in vh of travel ─────────────────────────────────── */
     // Every cue is anchored in vh of actual scrolling rather than in a fraction
     // of the track, so perceived speed never changes when the track length does.
-    const maxScroll = Math.max(1, el.scroller.scrollHeight - el.scroller.clientHeight);
+    const maxScroll = Math.max(
+      1,
+      el.scroller.scrollHeight - el.scroller.clientHeight,
+    );
     const vh = H / 100;
     const sc = unlocked ? el.scroller.scrollTop / vh : 0;
     const maxVh = maxScroll / vh;
     const A = 0.36 * maxVh;
 
-    const moved = Math.abs(mx - lastMx) > 0.0004 || Math.abs(my - lastMy) > 0.0004;
+    const moved =
+      Math.abs(mx - lastMx) > 0.0004 || Math.abs(my - lastMy) > 0.0004;
     if (sc === lastScroll && logoIn === lastLogoIn && !moved) return;
     lastScroll = sc;
     lastLogoIn = logoIn;
@@ -437,46 +532,77 @@ export function createOnboarding({
     el.roof.style.transform = `translate3d(0,${Math.max(-175, 170 + A - sc).toFixed(2)}vh,0)`;
 
     el.headline.style.transform = `translate3d(0,${stops(sc, [
-      [0, 95], [A, 0], [A + 40, -4], [A + 200, -30],
+      [0, 95],
+      [A, 0],
+      [A + 40, -4],
+      [A + 200, -30],
     ]).toFixed(2)}vh,0)`;
-    el.headline.style.opacity = String(stops(sc, [[0, 1], [A + 50, 1], [A + 150, 0]]));
+    el.headline.style.opacity = String(
+      stops(sc, [
+        [0, 1],
+        [A + 50, 1],
+        [A + 150, 0],
+      ]),
+    );
 
-    // Word-by-word highlight: each word eases its own ramp, so the wipe reads as
-    // one continuous sweep rather than a row of linear steps.
+    // Reveal complete phrases; keep the original overall stagger duration.
     const hp = clamp((sc - 0.04 * maxVh) / (0.3 * maxVh));
-    for (let i = 0; i < words.length; i++) {
-      const wi = ease(clamp((hp * 1.6 - i * 0.048) / 0.34));
+    for (let i = 0; i < phrases.length; i++) {
+      const delay = (i / Math.max(1, phrases.length - 1)) * 0.672;
+      const wi = ease(clamp((hp * 1.6 - delay) / 0.34));
       const g = Math.round(226 + (26 - 226) * wi);
-      words[i].style.color = `rgb(${g},${g},${g})`;
+      phrases[i].style.color = `rgb(${g},${g},${g})`;
     }
-    if (petal) petal.style.opacity = String(ease(clamp((hp * 1.6 - 0.24) / 0.34)));
+    if (petal)
+      petal.style.opacity = String(ease(clamp((hp * 1.6 - 0.24) / 0.34)));
 
     // Photos: staggered reveal with the headline, mouse parallax at rest, then
     // split away from the centre as the roof climbs. Deeper frames travel more.
-    const split = stops(sc, [[0, 0], [A + 10, 0], [A + 230, 88]]);
+    const split = stops(sc, [
+      [0, 0],
+      [A + 10, 0],
+      [A + 230, 88],
+    ]);
     for (let i = 0; i < photos.length; i++) {
       const f = photos[i];
       const inOp = ease(clamp((sc - 20 - i * 12) / 90));
       const outOp = 1 - ease(clamp((sc - (A + 40) - (3 - f.depth) * 10) / 170));
       f.node.style.opacity = String(inOp * outOp);
-      const rise = stops(sc, [[0, 20], [A, 0]]) * (0.5 + f.depth * 0.18);
+      const rise =
+        stops(sc, [
+          [0, 20],
+          [A, 0],
+        ]) *
+        (0.5 + f.depth * 0.18);
       const px = (-mx * f.depth * 16).toFixed(2);
       const py = (-my * f.depth * 12).toFixed(2);
       const dx = (f.dir * split * (0.6 + f.depth * 0.18)).toFixed(2);
       f.node.style.transform = `translate3d(calc(${dx}vw + ${px}px), calc(${rise.toFixed(2)}vh + ${py}px), 0)`;
     }
 
-    const bg = Math.round(255 - 17 * clamp(stops(sc, [[0, 0], [A + 300, 0], [A + 360, 1]])));
+    const bg = Math.round(
+      255 -
+        17 *
+          clamp(
+            stops(sc, [
+              [0, 0],
+              [A + 300, 0],
+              [A + 360, 1],
+            ]),
+          ),
+    );
     el.stage.style.background = `rgb(${bg},${bg},${bg})`;
 
     /* ── Closing prompt ───────────────────────────────────────────────────── */
 
     const v = ease(clamp((sc - (A + 330)) / 70));
     el.prompt.style.opacity = v > 0 ? "1" : "0";
-    for (let i = 0; i < promptWords.length; i++) {
-      const wi = clamp((v - i * 0.045) / 0.38);
-      promptWords[i].style.opacity = String(wi);
-      promptWords[i].style.transform = `translateY(${((1 - wi) * 14).toFixed(2)}px)`;
+    for (let i = 0; i < promptPhrases.length; i++) {
+      const delay = (i / Math.max(1, promptPhrases.length - 1)) * 0.36;
+      const wi = clamp((v - delay) / 0.38);
+      promptPhrases[i].style.opacity = String(wi);
+      promptPhrases[i].style.transform =
+        `translateY(${((1 - wi) * 14).toFixed(2)}px)`;
     }
     const bv = clamp((v - 0.5) / 0.4);
     el.promptActions.style.opacity = String(bv);
@@ -522,7 +648,8 @@ export function createOnboarding({
         return;
       }
       indeterminate = progress === null;
-      if (progress !== null) progressTarget = Math.max(progressTarget, progress * 100);
+      if (progress !== null)
+        progressTarget = Math.max(progressTarget, progress * 100);
       el.captionBytes.textContent = indeterminate
         ? `Đã nhận ${formatFileSize(loaded)}`
         : `${formatFileSize(loaded)} / ${formatFileSize(total)}`;
@@ -553,16 +680,4 @@ export function createOnboarding({
 
     destroy,
   };
-}
-
-/** Rewrite the precomposed Vietnamese letters Libertinus Serif renders blank. */
-function fixGlyphs(scope: HTMLElement) {
-  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    const value = node.nodeValue;
-    if (!value) continue;
-    const out = value.replace(GLYPH_RE, (c) => GLYPH_FIX[c]);
-    if (out !== value) node.nodeValue = out;
-  }
 }
