@@ -61,6 +61,24 @@ button {
   height: 100%;
 }
 
+/* ─── Onboarding handover ───────────────────────────────────────────────────
+   While the intro overlay is up it owns the viewport, so the page chrome and
+   the fallback loading card stay hidden. Removing `is-onboarding` starts the
+   page's fade-in, timed to match the intro's 700ms fade-out. */
+.page-layout {
+  transition: opacity 700ms ease;
+}
+
+#app.is-onboarding .page-layout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#app.is-onboarding .viewer-loading {
+  opacity: 0;
+  visibility: hidden;
+}
+
 /* ─── Initial model loading state ───────────────────────────────────────── */
 .viewer-loading {
   position: absolute;

@@ -5,6 +5,7 @@ import { createInfoPanel } from "./ui/info-panel";
 import { formatFileSize } from "./utils/format";
 import { viewerConfig } from "./config/viewer-config";
 import { createViewer } from "./viewer/createViewer";
+import { createOnboarding } from "./onboarding/createOnboarding";
 
 inject();
 
@@ -31,7 +32,7 @@ if (!progressTrack) throw new Error("Missing required DOM element: .progress-tra
 
 // ── Initial setup ─────────────────────────────────────────────────────────────
 document.title = `${viewerConfig.meta.title} | 3D Viewer`;
-app.classList.add("is-loading");
+app.classList.add("is-loading", "is-onboarding");
 statusLabel.textContent = viewerConfig.ui.loadingStatus;
 statusMessage.textContent = viewerConfig.ui.preparingStatus;
 progressShell.dataset.mode = "determinate";
@@ -74,6 +75,23 @@ function selectBuilding(building: (typeof BUILDINGS)[number]) {
   panel.open(building, BUILDINGS);
 }
 
+// ── Onboarding intro ──────────────────────────────────────────────────────────
+// Plays over the whole viewport while the ~18.5 MB campus GLB downloads. The
+// year counter (1927 → 2027) is driven by the real download progress, so it
+// only lands on 2027 once the model is actually on screen behind it.
+const onboarding = createOnboarding({
+  onComplete: () => {
+    // Called as the intro starts its cross-fade, so the page enters in sync.
+    app.classList.remove("is-onboarding");
+  },
+  onRetry: () => {
+    void viewer.load().catch(() => {
+      // Errors are mapped to the UI layer via onError / onStatusChange.
+    });
+  },
+  baseUrl: import.meta.env.BASE_URL,
+});
+
 // ── Viewer ────────────────────────────────────────────────────────────────────
 const viewer = createViewer({
   mount: viewerStage,
@@ -102,6 +120,7 @@ const viewer = createViewer({
   },
 
   onProgress({ progress, loaded, total }) {
+    onboarding.setProgress({ progress, loaded, total });
     statusLabel.textContent = viewerConfig.ui.loadingStatus;
     progressShell.hidden = false;
     progressValue.hidden = false;
@@ -147,6 +166,7 @@ const viewer = createViewer({
       progressValue.textContent = "100%";
       progressFill.style.width = "100%";
       errorBanner.hidden = true;
+      onboarding.setModelReady();
       return;
     }
     if (status === "error") {
@@ -160,6 +180,7 @@ const viewer = createViewer({
   },
 
   onError(message) {
+    onboarding.setModelError(message);
     errorBanner.hidden = false;
     errorBanner.textContent = `${viewerConfig.ui.errorTitle}: ${message}`;
     statusMessage.textContent =
