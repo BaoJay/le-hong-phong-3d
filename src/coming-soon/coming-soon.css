@@ -1,0 +1,261 @@
+/* ─── Coming Soon ────────────────────────────────────────────────────────────
+   Figma: Wireframe — Design System, node 52:8.
+   Desktop keeps the 1440×896 frame and scales it to cover the viewport so the
+   handwritten-style copy stays on the notebook pages of the photo. Portrait /
+   narrow screens fall back to a stacked layout over the same photo.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --cs-ink: #1b2f82;
+  --cs-paper: #efefef;
+  --cs-tilt: -9.56deg;
+  --cs-serif: "Libertinus Serif", Georgia, "Times New Roman", serif;
+  --cs-sans: "Inter", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--cs-paper);
+}
+
+body {
+  color: var(--cs-ink);
+  font-family: var(--cs-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+p,
+h1 {
+  margin: 0;
+}
+
+.cs {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--cs-paper);
+}
+
+/* ─── Stage — the Figma frame, scaled to cover ───────────────────────────── */
+.cs-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1440px;
+  height: 896px;
+  transform: translate(-50%, -50%) scale(var(--cs-scale, 1));
+}
+
+.cs-backdrop img {
+  position: absolute;
+  /* Same crop of the 16:9 photo as the Figma frame. */
+  left: -9.3%;
+  top: 0;
+  width: 110.62%;
+  height: 100.07%;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ─── Left page ──────────────────────────────────────────────────────────── */
+/* Anchored on the centre of the day counter, then tilted with the paper. */
+.cs-page--left {
+  position: absolute;
+  left: 479px;
+  top: 440px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform-origin: 0 0;
+  transform: rotate(var(--cs-tilt)) translate(calc(-50% + 17px), -205px);
+}
+
+.cs-eyebrow,
+.cs-desc {
+  font-family: var(--cs-sans);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.44;
+  letter-spacing: -0.03em;
+}
+
+.cs-heading {
+  margin-top: 57px;
+  font-family: var(--cs-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 46px;
+  letter-spacing: -0.07em;
+}
+
+.cs-countdown {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  margin-top: -34px;
+  font-family: var(--cs-serif);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.cs-countdown__word {
+  font-size: 40px;
+  letter-spacing: -0.07em;
+}
+
+.cs-countdown__value {
+  font-size: 151.48px;
+  line-height: 173px;
+  letter-spacing: -0.05em;
+  font-variant-numeric: lining-nums;
+}
+
+.cs-desc {
+  width: 324px;
+  margin-top: 40px;
+}
+
+.cs-desc--strong {
+  margin-top: 17px;
+  font-weight: 600;
+}
+
+/* ─── Right page ─────────────────────────────────────────────────────────── */
+.cs-page--right {
+  display: contents;
+}
+
+.cs-signup-copy {
+  position: absolute;
+  left: 1134px;
+  top: 312px;
+  width: 289px;
+  transform: translate(-50%, -50%) rotate(var(--cs-tilt));
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 1.44;
+  letter-spacing: -0.03em;
+  text-align: center;
+}
+
+.cs-signup {
+  position: absolute;
+  left: 1070px;
+  top: 357px;
+  display: block;
+  border-radius: 8px;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+.cs-signup img {
+  display: block;
+}
+
+.cs-signup:hover {
+  transform: scale(1.04) rotate(-1deg);
+}
+
+.cs-signup:active {
+  opacity: 0.75;
+}
+
+.cs-signup:focus-visible {
+  outline: 2px solid var(--cs-ink);
+  outline-offset: 6px;
+}
+
+/* ─── Portrait / narrow screens ──────────────────────────────────────────── */
+/* The spread is too wide to cover a tall viewport without cropping one page,
+   so the copy is stacked instead, still tilted like handwriting on the paper. */
+@media (max-aspect-ratio: 5/4), (max-width: 767px) {
+  .cs {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .cs-stage {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    padding: 64px 16px;
+    transform: none;
+  }
+
+  .cs-backdrop img {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 34% 50%;
+  }
+
+  .cs-page--left {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+    max-width: 100%;
+    transform-origin: 50% 50%;
+    transform: rotate(var(--cs-tilt));
+  }
+
+  .cs-countdown__value {
+    font-size: 120px;
+    line-height: 140px;
+  }
+
+  .cs-countdown {
+    margin-top: -24px;
+  }
+
+  .cs-heading {
+    margin-top: 40px;
+  }
+
+  .cs-desc {
+    width: 300px;
+    max-width: 100%;
+  }
+
+  .cs-page--right {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cs-signup-copy,
+  .cs-signup {
+    position: relative;
+    left: auto;
+    top: auto;
+  }
+
+  .cs-signup-copy {
+    transform: rotate(var(--cs-tilt));
+  }
+}
