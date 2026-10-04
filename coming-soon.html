@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Không gian kỷ niệm một trăm năm Trường THPT Chuyên Lê Hồng Phong đang được hoàn thiện. Trang mở vào 09:00 ngày 05.09.2027."
+    />
+    <title>Sắp ra mắt | Một Trăm Năm Lê Hồng Phong</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Libertinus+Serif:ital@1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preload" as="image" href="/coming-soon/notebook.webp" type="image/webp" />
+  </head>
+  <body>
+    <!-- Served instead of index.html when VITE_SITE_MODE=coming-soon (see vite.config.ts). -->
+    <main class="cs" id="coming-soon">
+      <div class="cs-stage" id="cs-stage">
+        <picture class="cs-backdrop">
+          <source srcset="/coming-soon/notebook.webp" type="image/webp" />
+          <img src="/coming-soon/notebook.jpg" alt="" width="2560" height="1440" />
+        </picture>
+
+        <!-- Left page: title + countdown -->
+        <section class="cs-page cs-page--left" aria-labelledby="cs-heading">
+          <p class="cs-eyebrow">Một trăm năm Lê Hồng Phong<br />1927-2027</p>
+          <h1 class="cs-heading" id="cs-heading">Sắp ra mắt</h1>
+          <p class="cs-countdown">
+            <span class="cs-countdown__word">Còn</span>
+            <span class="cs-countdown__value" id="cs-days">349</span>
+            <span class="cs-countdown__word">Ngày</span>
+          </p>
+          <p class="cs-desc">
+            Không gian kỷ niệm một trăm năm của nhà trường đang được hoàn thiện.
+          </p>
+          <p class="cs-desc cs-desc--strong">
+            Trang mở vào 09:00 ngày 05.09.2027.
+          </p>
+        </section>
+
+        <!-- Right page: sign-up call to action -->
+        <section class="cs-page cs-page--right">
+          <p class="cs-signup-copy">
+            Đăng ký để nhận thư mời vào đúng thời khắc mở cửa.
+          </p>
+          <a class="cs-signup" id="cs-signup" href="#" aria-label="Đăng ký">
+            <img src="/coming-soon/signup.svg" alt="" width="166" height="114" />
+          </a>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="/src/coming-soon/main.ts"></script>
+  </body>
+</html>
