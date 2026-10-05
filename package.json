@@ -19,6 +19,7 @@
     "three": "^0.179.1"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.3"
   }

@@ -8,7 +8,7 @@ export const viewerConfig: ViewerConfig = {
     subtitle: "Dự án kỉ niệm 100 năm LHP",
   },
   model: {
-    src: `${baseUrl}models/LHP100_20260607_pk.glb`,
+    src: `${baseUrl}models/LHP100_20261005-draco.glb`,
     fitPadding: 1.45,
     initialRotation: [0, 0, 0],
     initialScale: 1,
