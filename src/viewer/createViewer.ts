@@ -70,6 +70,7 @@ const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
 const DEFAULT_SHADOW_MAP_SIZE = 4096;
 const MIN_SUN_DISTANCE = 20;
 const MIN_SHADOW_EXTENT = 25;
+const SHADOW_NORMAL_BIAS_TEXELS = 1.5;
 const DEFAULT_EDGE_COLOR = "#2f2f2f";
 const DEFAULT_EDGE_OPACITY = 0.72;
 const DEFAULT_EDGE_THRESHOLD_ANGLE = 24;
@@ -558,7 +559,6 @@ export function createViewer({
       config.scene.lights.sketchUpSunDirection,
     );
     const lightDistance = Math.max(maxDimension * 2, MIN_SUN_DISTANCE);
-    const shadowExtent = Math.max(maxDimension * 0.75, MIN_SHADOW_EXTENT);
     const shadowCamera = directionalLight.shadow.camera;
 
     directionalLight.position
@@ -567,13 +567,46 @@ export function createViewer({
     directionalLight.target.position.copy(center);
     directionalLight.target.updateMatrixWorld();
 
-    shadowCamera.near = 0.1;
-    shadowCamera.far = Math.max(lightDistance + maxDimension * 2, 100);
-    shadowCamera.left = -shadowExtent;
-    shadowCamera.right = shadowExtent;
-    shadowCamera.top = shadowExtent;
-    shadowCamera.bottom = -shadowExtent;
+    // Ôm sát frustum shadow theo bounds của model trong không gian ánh sáng,
+    // để mỗi texel của shadow map phủ diện tích nhỏ nhất có thể.
+    const lightRotation = new Matrix4().lookAt(
+      directionalLight.position,
+      center,
+      shadowCamera.up,
+    );
+    const worldToLight = new Matrix4()
+      .makeTranslation(
+        -directionalLight.position.x,
+        -directionalLight.position.y,
+        -directionalLight.position.z,
+      )
+      .premultiply(lightRotation.transpose());
+    const lightBounds = bounds.clone().applyMatrix4(worldToLight);
+    const halfWidth = Math.max(
+      Math.abs(lightBounds.min.x),
+      Math.abs(lightBounds.max.x),
+      MIN_SHADOW_EXTENT,
+    );
+    const halfHeight = Math.max(
+      Math.abs(lightBounds.min.y),
+      Math.abs(lightBounds.max.y),
+      MIN_SHADOW_EXTENT,
+    );
+
+    shadowCamera.near = Math.max(-lightBounds.max.z - 1, 0.1);
+    shadowCamera.far = -lightBounds.min.z + 1;
+    shadowCamera.left = -halfWidth;
+    shadowCamera.right = halfWidth;
+    shadowCamera.top = halfHeight;
+    shadowCamera.bottom = -halfHeight;
     shadowCamera.updateProjectionMatrix();
+
+    // Bias phải tỉ lệ với kích thước texel, nếu không bề mặt sẽ tự đổ bóng
+    // lên chính nó thành các sọc chéo (shadow acne).
+    const texelSize =
+      (2 * Math.max(halfWidth, halfHeight)) / DEFAULT_SHADOW_MAP_SIZE;
+    directionalLight.shadow.normalBias = texelSize * SHADOW_NORMAL_BIAS_TEXELS;
+    directionalLight.shadow.bias = -0.0005;
     directionalLight.shadow.needsUpdate = true;
   }
 

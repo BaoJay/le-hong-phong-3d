@@ -24,7 +24,7 @@ Ví dụ với glTF Transform CLI:
 
 ```bash
 npm install -D @gltf-transform/cli
-npx gltf-transform optimize school.glb school-draco.glb --compress draco
+npx gltf-transform optimize LHP100_20261005.glb LHP100_20261005-draco.glb --compress draco
 ```
 
 Nếu model quá nặng, nên giảm polygon hoặc bỏ bớt chi tiết ngay từ file nguồn trước khi nén.
