@@ -2,6 +2,7 @@ import {
   AmbientLight,
   AxesHelper,
   Box3,
+  BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -26,18 +27,24 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import type { Material } from "three";
+import type { InterleavedBufferAttribute, Material } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { createContextLayer, smoothstep } from "./context-layer";
+import { createGeoTransform } from "./geo";
 import type {
+  BasemapInfo,
   LoadingProgress,
+  ModelFaceFilter,
   ViewerApi,
   ViewerConfig,
   ViewerStatus,
 } from "./types";
+import { distanceToZoom, zoomToDistance } from "./zoom-level";
+import type { ZoomScale } from "./zoom-level";
 
 interface ViewerCallbacks {
   onProgress?: (progress: LoadingProgress) => void;
@@ -46,6 +53,8 @@ interface ViewerCallbacks {
   onAutoRotateChange?: (enabled: boolean) => void;
   onObjectClick?: (point: [number, number, number]) => void;
   onEmptyClick?: () => void;
+  onZoomChange?: (zoom: number) => void;
+  onBasemapChange?: (basemap: BasemapInfo | null) => void;
 }
 
 interface InitialViewState {
@@ -59,8 +68,15 @@ interface CreateViewerOptions extends ViewerCallbacks {
   config: ViewerConfig;
 }
 
-const CAMERA_NEAR_DIVISOR = 120;
-const CAMERA_FAR_MULTIPLIER = 18;
+// near/far và fog đi theo khoảng cách camera → tâm orbit, vì zoom z13–z20
+// trải hơn 100 lần khoảng cách.
+const CAMERA_NEAR_DIVISOR = 100;
+const CAMERA_FAR_MULTIPLIER = 40;
+const CAMERA_CLIP_UPDATE_RATIO = 0.02;
+const FOG_NEAR_MULTIPLIER = 1.6;
+const FOG_FAR_MULTIPLIER = 9;
+const ZOOM_CHANGE_EPSILON = 0.01;
+const DEFAULT_FACE_FILTER_TOLERANCE = 0.01;
 const DEFAULT_DEBUG_AXES_SIZE = 20;
 const DEFAULT_DEBUG_AXES_COLORS: [string, string, string] = [
   "#2f72ff",
@@ -83,6 +99,13 @@ const MAX_FRAME_DELTA_SECONDS = 1 / 30;
 const DEFAULT_FRAME_DELTA_SECONDS = 1 / 60;
 const CAMERA_ANIMATION_DURATION_SECONDS = 0.55;
 
+interface FadeMaterial {
+  material: Material;
+  baseOpacity: number;
+  /** Vật liệu đục mờ dần bằng alpha hash để khỏi phải sắp xếp mặt trong suốt. */
+  useAlphaHash: boolean;
+}
+
 interface StaticMeshBucket {
   geometries: BufferGeometry[];
   material: Material;
@@ -99,6 +122,8 @@ export function createViewer({
   onAutoRotateChange,
   onObjectClick,
   onEmptyClick,
+  onZoomChange,
+  onBasemapChange,
 }: CreateViewerOptions): ViewerApi {
   const scene = new Scene();
   scene.fog = new Fog(config.scene.fogColor, 20, 120);
@@ -196,6 +221,28 @@ export function createViewer({
   ground.visible = false;
   scene.add(ground);
 
+  const geo = createGeoTransform(config.geo);
+  console.info(
+    `[geo] ${geo.source}: ${geo.metersPerUnit.toFixed(4)} m/đơn vị, ` +
+      `xoay ${geo.rotationDeg.toFixed(2)}°, gốc ${geo.origin[1].toFixed(6)}, ${geo.origin[0].toFixed(6)}` +
+      (geo.residualsMeters.length > 0
+        ? `, sai số GCP ${geo.residualsMeters.map((r) => r.toFixed(2)).join(" / ")} m`
+        : ""),
+  );
+
+  const contextLayer = createContextLayer({
+    config: config.context,
+    zoom: config.zoom,
+    geo,
+    onBasemapChange: (basemap) => {
+      // Basemap thay cho mặt nền xám dưới chân model.
+      ground.visible = config.model.enableGround && !basemap;
+      onBasemapChange?.(basemap);
+    },
+  });
+  scene.add(contextLayer.group);
+  let contextLoad: Promise<void> | null = null;
+
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath(config.draco.decoderPath);
 
@@ -276,9 +323,10 @@ export function createViewer({
     const refPos = camAnim ? camAnim.endPos : camera.position;
     const refTarget = camAnim ? camAnim.endTarget : controls.target;
     const dir = new Vector3().subVectors(refPos, refTarget).normalize();
-    const newDist = Math.max(
-      refPos.distanceTo(refTarget) * 0.38,
-      controls.minDistance * 2,
+    // Luôn dừng ở mức zoom đã hiện rõ GLB.
+    const newDist = Math.min(
+      Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2),
+      zoomToUnits(config.zoom.modelFade[1] + 0.5),
     );
 
     // Shift target rightward so the building stays centered in the viewport
@@ -323,8 +371,18 @@ export function createViewer({
 
     raycaster.setFromCamera(ndcPointer, camera);
     if (modelRoot) {
-      const hits = raycaster.intersectObject(modelRoot, true);
-      const hit = hits[0];
+      // Khi GLB còn ẩn/mờ (zoom thấp), click vào trường thì bay về góc nhìn
+      // chi tiết. Raycaster không xét `visible`, nên GLB ẩn vẫn bắt được.
+      const showingDetail = modelFade >= 0.999;
+      const targets = showingDetail
+        ? [modelRoot]
+        : [modelRoot, ...contextLayer.schoolPickables()];
+      const hit = raycaster.intersectObjects(targets, true)[0];
+      if (!showingDetail) {
+        if (hit) resetViewAnimated();
+        else onEmptyClick?.();
+        return;
+      }
       if (hit) onObjectClick([hit.point.x, hit.point.y, hit.point.z]);
       else onEmptyClick?.();
     } else {
@@ -334,6 +392,9 @@ export function createViewer({
 
   let initialViewState: InitialViewState | null = null;
   let modelRoot: Group | null = null;
+  let fadeMaterials: FadeMaterial[] = [];
+  let modelFade = 1;
+  let lastEmittedZoom = Number.NaN;
   let resizeObserver: ResizeObserver | null = null;
   let destroyed = false;
   let loadPromise: Promise<void> | null = null;
@@ -352,7 +413,101 @@ export function createViewer({
       Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO),
     );
     renderer.setSize(width, height, false);
+    updateDistanceLimits();
   };
+
+  function zoomScale(): ZoomScale {
+    return {
+      latitude: geo.origin[1],
+      tileSize: config.zoom.tileSize,
+      fovDeg: camera.fov,
+      viewportHeight: Math.max(mount.clientHeight, 1),
+    };
+  }
+
+  /** Khoảng cách camera theo đơn vị model ứng với một mức zoom. */
+  function zoomToUnits(zoom: number) {
+    return zoomToDistance(zoom, zoomScale()) / geo.metersPerUnit;
+  }
+
+  function unitsToZoom(distance: number) {
+    return distanceToZoom(distance * geo.metersPerUnit, zoomScale());
+  }
+
+  function getZoom() {
+    return unitsToZoom(camera.position.distanceTo(controls.target));
+  }
+
+  function updateDistanceLimits() {
+    controls.minDistance = zoomToUnits(config.zoom.max);
+    controls.maxDistance = zoomToUnits(config.zoom.min);
+  }
+
+  function updateZoomState() {
+    clampPan();
+
+    const distance = camera.position.distanceTo(controls.target);
+    const nextNear = Math.max(distance / CAMERA_NEAR_DIVISOR, 0.01);
+    if (Math.abs(nextNear - camera.near) > camera.near * CAMERA_CLIP_UPDATE_RATIO) {
+      camera.near = nextNear;
+      camera.far = Math.max(distance * CAMERA_FAR_MULTIPLIER, config.camera.far);
+      camera.updateProjectionMatrix();
+    }
+    if (scene.fog instanceof Fog) {
+      scene.fog.near = distance * FOG_NEAR_MULTIPLIER;
+      scene.fog.far = distance * FOG_FAR_MULTIPLIER;
+    }
+
+    const zoom = unitsToZoom(distance);
+    contextLayer.setZoom(zoom);
+    setModelFade(smoothstep(config.zoom.modelFade[0], config.zoom.modelFade[1], zoom));
+    if (!(Math.abs(zoom - lastEmittedZoom) < ZOOM_CHANGE_EPSILON)) {
+      lastEmittedZoom = zoom;
+      onZoomChange?.(zoom);
+    }
+  }
+
+  /** Giữ tâm orbit trong khu vực có dữ liệu, dời camera cùng tâm để khỏi giật. */
+  function clampPan() {
+    const center = geo.originInModel;
+    const limit = config.zoom.maxPanMeters / geo.metersPerUnit;
+    const dx = controls.target.x - center.x;
+    const dz = controls.target.z - center.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance <= limit) return;
+
+    const scale = limit / distance;
+    const shiftX = center.x + dx * scale - controls.target.x;
+    const shiftZ = center.z + dz * scale - controls.target.z;
+    controls.target.x += shiftX;
+    controls.target.z += shiftZ;
+    camera.position.x += shiftX;
+    camera.position.z += shiftZ;
+  }
+
+  function setModelFade(fade: number) {
+    if (!modelRoot || Math.abs(fade - modelFade) < 1e-3) return;
+    modelFade = fade;
+
+    const visible = fade > 0.001;
+    if (modelRoot.visible !== visible) {
+      modelRoot.visible = visible;
+      requestShadowMapUpdate();
+    }
+
+    for (const entry of fadeMaterials) {
+      if (entry.useAlphaHash) {
+        const hashed = fade < 0.999;
+        if (entry.material.alphaHash !== hashed) {
+          entry.material.alphaHash = hashed;
+          entry.material.needsUpdate = true;
+        }
+        entry.material.opacity = hashed ? fade : entry.baseOpacity;
+      } else {
+        entry.material.opacity = entry.baseOpacity * fade;
+      }
+    }
+  }
 
   let lastFrameTime = 0;
   const animate = (time = 0) => {
@@ -382,6 +537,7 @@ export function createViewer({
       controls.update(deltaTime);
     }
 
+    updateZoomState();
     updateTrackedLabels();
     renderer.render(scene, camera);
   };
@@ -424,6 +580,10 @@ export function createViewer({
       return loadPromise;
     }
 
+    contextLoad ??= contextLayer.load().catch((error) => {
+      console.warn("[context] Không tải được lớp bối cảnh.", error);
+    });
+
     loadPromise = loadModel().catch((error) => {
       loadPromise = null;
       throw error;
@@ -458,12 +618,15 @@ export function createViewer({
       modelRoot.name = "LeHongPhongCampus";
 
       applyModelTransform(modelRoot, config);
+      removeFaces(modelRoot, config.model.removeFaces ?? []);
       const modelEdges = createMergedModelEdges(modelRoot, config);
       optimizeStaticMeshes(modelRoot);
       applyShadowSettings(modelRoot, config.model.enableShadows);
       if (modelEdges) {
         modelRoot.add(modelEdges);
       }
+      fadeMaterials = collectFadeMaterials(modelRoot);
+      modelFade = 1;
 
       scene.add(modelRoot);
 
@@ -497,21 +660,11 @@ export function createViewer({
     const orbitTarget = config.controls.orbitTarget
       ? new Vector3(...config.controls.orbitTarget)
       : bounds.getCenter(new Vector3());
-    const size = bounds.getSize(new Vector3());
-    const maxDimension = Math.max(size.x, size.y, size.z);
-    const radius = maxDimension / 2;
-    const fitPadding = config.model.fitPadding;
-    const fovInRadians = MathUtils.degToRad(camera.fov);
-    const verticalFitDistance = radius / Math.tan(fovInRadians / 2);
-    const horizontalFitDistance = verticalFitDistance / camera.aspect;
-    // fitDistance là khoảng cách từ camera đến tâm orbit, để toàn bộ model nằm trong view
-    const fitDistance =
-      fitPadding * Math.max(verticalFitDistance, horizontalFitDistance);
 
-    // Giới hạn khoảng cách camera để tránh zoom quá gần hoặc quá xa
-    const minDistance = fitDistance * 0.1;
-    const maxDistance = fitDistance;
-    const initialDistance = maxDistance / 2;
+    // Khoảng cách ban đầu theo zoom như web map. Màn hình dọc lùi thêm để bề
+    // ngang vẫn chứa đủ khuôn viên như cách fit theo chiều ngang trước đây.
+    const initialZoom = config.zoom.initial + Math.min(0, Math.log2(camera.aspect));
+    const initialDistance = zoomToUnits(initialZoom);
 
     // Hướng đặt camera ban đầu so với tâm orbit, lấy từ config viewer-config.ts, fitDirection: [1.25, 0.72, 1.4]
     // .normalize() biến vector này thành vector đơn vị, nên độ lớn không quan trọng, chỉ quan trọng tỉ lệ giữa x/y/z
@@ -524,31 +677,18 @@ export function createViewer({
       .add(orbitTarget);
 
     camera.position.copy(nextPosition);
-    // vật thể gần camera hơn khoảng này sẽ không được render.
-    camera.near = Math.max(fitDistance / CAMERA_NEAR_DIVISOR, 0.01);
-    // vật thể xa camera hơn khoảng này sẽ không được render.
-    camera.far = Math.max(
-      fitDistance * CAMERA_FAR_MULTIPLIER,
-      config.camera.far,
-    );
-    camera.updateProjectionMatrix();
 
-    // Trục orbit thật nằm ở đây
+    // Trục orbit thật nằm ở đây; giới hạn zoom và near/far cập nhật mỗi frame
     controls.target.copy(orbitTarget);
-    controls.minDistance = minDistance;
-    controls.maxDistance = maxDistance;
+    updateDistanceLimits();
     controls.update();
+    updateZoomState();
 
     // Lưu trạng thái view ban đầu để reset khi bấm button reset
     initialViewState = {
       position: nextPosition.clone(),
       target: orbitTarget.clone(),
     };
-
-    if (scene.fog instanceof Fog) {
-      scene.fog.near = Math.max(fitDistance * 0.8, 10);
-      scene.fog.far = Math.max(fitDistance * 4.5, 50);
-    }
   }
 
   function updateSunLight(bounds: Box3) {
@@ -622,21 +762,36 @@ export function createViewer({
     ground.scale.setScalar(Math.max(diameter, 12));
     // Tự động định vị ground ở tâm X, Z của mô hình, và dưới chân mô hình (bounds.min.y) một khoảng nhỏ
     ground.position.set(center.x, bounds.min.y - 0.02, center.z);
-    ground.visible = config.model.enableGround;
+    ground.visible = config.model.enableGround && !contextLayer.hasBasemap();
   }
 
   function zoomIn() {
-    const offset = new Vector3().subVectors(camera.position, controls.target);
-    offset.multiplyScalar(0.8);
-    camera.position.copy(controls.target).add(offset);
-    controls.update();
+    zoomBy(1);
   }
 
   function zoomOut() {
-    const offset = new Vector3().subVectors(camera.position, controls.target);
-    offset.multiplyScalar(1.25);
-    camera.position.copy(controls.target).add(offset);
-    controls.update();
+    zoomBy(-1);
+  }
+
+  /** Nút +/- đổi đúng 1 mức zoom như web map, có animation. */
+  function zoomBy(delta: number) {
+    const refPos = camAnim ? camAnim.endPos : camera.position;
+    const refTarget = camAnim ? camAnim.endTarget : controls.target;
+    const offset = new Vector3().subVectors(refPos, refTarget);
+    const nextZoom = MathUtils.clamp(
+      unitsToZoom(offset.length()) + delta,
+      config.zoom.min,
+      config.zoom.max,
+    );
+    offset.setLength(zoomToUnits(nextZoom));
+
+    camAnim = {
+      startPos: camera.position.clone(),
+      endPos: refTarget.clone().add(offset),
+      startTarget: controls.target.clone(),
+      endTarget: refTarget.clone(),
+      progress: 0,
+    };
   }
 
   function resetView() {
@@ -663,6 +818,8 @@ export function createViewer({
       modelRoot = null;
     }
 
+    scene.remove(contextLayer.group);
+    contextLayer.dispose();
     ground.geometry.dispose();
     ground.material.dispose();
     dracoLoader.dispose();
@@ -677,6 +834,12 @@ export function createViewer({
     isAutoRotateEnabled: () => controls.autoRotate,
     zoomIn,
     zoomOut,
+    getZoom,
+    async setBasemap(id: string) {
+      await contextLoad;
+      return contextLayer.setBasemap(id);
+    },
+    modelToLngLat: ([x, , z]) => geo.modelToLngLat(x, z),
     setLabels,
     focusOnPoint,
     destroy,
@@ -725,6 +888,103 @@ function applyShadowSettings(root: Object3D, enableShadows: boolean) {
     child.castShadow = enableShadows;
     child.receiveShadow = enableShadows;
   });
+}
+
+/**
+ * Bỏ các tam giác có UV khớp màu palette, rồi dồn lại vertex còn dùng để
+ * bounding box (fit camera, shadow) không còn tính phần đã xoá.
+ */
+function removeFaces(root: Object3D, filters: ModelFaceFilter[]) {
+  if (filters.length === 0) return;
+
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh)) return;
+    const filter = filters.find((entry) => entry.mesh === child.name);
+    const uv = child.geometry.getAttribute("uv");
+    const index = child.geometry.getIndex();
+    if (!filter || !uv || !index) return;
+
+    const tolerance = filter.tolerance ?? DEFAULT_FACE_FILTER_TOLERANCE;
+    const matches = (vertex: number) =>
+      Math.abs(uv.getX(vertex) - filter.uv[0]) <= tolerance &&
+      Math.abs(uv.getY(vertex) - filter.uv[1]) <= tolerance;
+
+    const vertexCount = child.geometry.getAttribute("position").count;
+    const remap = new Int32Array(vertexCount).fill(-1);
+    const keptIndex: number[] = [];
+    let keptVertices = 0;
+    let removed = 0;
+
+    for (let i = 0; i < index.count; i += 3) {
+      const triangle = [index.getX(i), index.getX(i + 1), index.getX(i + 2)];
+      if (triangle.every(matches)) {
+        removed += 1;
+        continue;
+      }
+      for (const vertex of triangle) {
+        if (remap[vertex] < 0) remap[vertex] = keptVertices++;
+        keptIndex.push(remap[vertex]);
+      }
+    }
+
+    if (removed === 0) {
+      console.warn(`[model] removeFaces: không có tam giác nào của "${child.name}" khớp UV ${filter.uv.join(", ")}.`);
+      return;
+    }
+
+    const source = child.geometry;
+    const compacted = new BufferGeometry();
+    for (const name of Object.keys(source.attributes)) {
+      compacted.setAttribute(
+        name,
+        compactAttribute(source.getAttribute(name), remap, keptVertices),
+      );
+    }
+    compacted.setIndex(keptIndex);
+    child.geometry = compacted;
+    source.dispose();
+    console.info(`[model] removeFaces: bỏ ${removed} tam giác của "${child.name}".`);
+  });
+}
+
+function compactAttribute(
+  attribute: BufferAttribute | InterleavedBufferAttribute,
+  remap: Int32Array,
+  count: number,
+): BufferAttribute {
+  const ArrayType = (attribute.array as Float32Array).constructor as Float32ArrayConstructor;
+  const result = new BufferAttribute(
+    new ArrayType(count * attribute.itemSize),
+    attribute.itemSize,
+    attribute.normalized,
+  );
+  for (let vertex = 0; vertex < remap.length; vertex += 1) {
+    const target = remap[vertex];
+    if (target < 0) continue;
+    for (let component = 0; component < attribute.itemSize; component += 1) {
+      result.setComponent(target, component, attribute.getComponent(vertex, component));
+    }
+  }
+  return result;
+}
+
+function collectFadeMaterials(root: Object3D): FadeMaterial[] {
+  const entries = new Map<Material, FadeMaterial>();
+  root.traverse((child: Object3D) => {
+    if (!(child instanceof Mesh) && !(child instanceof LineSegments)) return;
+    const materials: Material[] = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    for (const material of materials) {
+      if (entries.has(material)) continue;
+      entries.set(material, {
+        material,
+        baseOpacity: material.opacity,
+        useAlphaHash: child instanceof Mesh && !material.transparent,
+      });
+    }
+  });
+  return [...entries.values()];
 }
 
 function createMergedModelEdges(

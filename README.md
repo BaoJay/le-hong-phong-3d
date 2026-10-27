@@ -33,6 +33,21 @@ npm run preview
 - `public/models/LHP100_20260607_pk.glb`: model thật đang được viewer tải.
 - `public/models/le-hong-phong-campus-placeholder.glb`: model placeholder được generate tự động sau `npm install`.
 - `docs/sketchup-to-glb.md`: checklist để thay model SketchUp thật vào app.
+- `src/viewer/zoom-level.ts`, `geo.ts`, `context-layer.ts`: zoom kiểu web map,
+  gắn model vào toạ độ thật, basemap + khối LOD1 xung quanh trường.
+- `data/context/context.json`, `scripts/fetch-*.mjs`: nguồn và script tải
+  basemap / building OSM vào `public/context/`.
+
+## Zoom theo mức bản đồ
+
+Zoom xa (z13–z15) hiện basemap và khối LOD1 quanh trường; từ z16 hiện model
+GLB, còn khối xung quanh mờ dần. Xem [docs/geo-context.md](docs/geo-context.md)
+để hiệu chỉnh vị trí model (`?calibrate`) và tải dữ liệu nền:
+
+```bash
+npm run fetch:basemaps
+npm run fetch:buildings
+```
 
 ## Màn onboarding
 

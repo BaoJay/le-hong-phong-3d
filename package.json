@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "sync:draco": "node scripts/sync-draco.mjs",
     "generate:placeholder-model": "node scripts/generate-placeholder-model.mjs",
-    "postinstall": "npm run sync:draco && npm run generate:placeholder-model"
+    "postinstall": "npm run sync:draco && npm run generate:placeholder-model",
+    "fetch:basemaps": "node scripts/fetch-basemaps.mjs",
+    "fetch:buildings": "node scripts/fetch-osm-buildings.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.5.1",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.3"
   }

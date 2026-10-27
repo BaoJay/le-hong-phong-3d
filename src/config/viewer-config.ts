@@ -9,7 +9,6 @@ export const viewerConfig: ViewerConfig = {
   },
   model: {
     src: `${baseUrl}models/LHP100_20261005-draco.glb`,
-    fitPadding: 1.45,
     initialRotation: [0, 0, 0],
     initialScale: 1,
     enableGround: true,
@@ -20,6 +19,9 @@ export const viewerConfig: ViewerConfig = {
       opacity: 0.5,
       thresholdAngle: 30,
     },
+    // Mặt phẳng nền tạm trong file SketchUp (màu palette thứ 2 của Mesh80).
+    // Xoá entry này khi export lại model đã bỏ mặt phẳng đó.
+    removeFaces: [{ mesh: "Mesh80", uv: [0.09375, 0.09375] }],
   },
   draco: {
     decoderPath: `${baseUrl}draco/`,
@@ -53,6 +55,37 @@ export const viewerConfig: ViewerConfig = {
     dampingFactor: 0.06,
     stopAutoRotateOnInteract: true,
     orbitTarget: [50, 0, -80], // Tâm xoay tại tim sân trường khu A
+  },
+  geo: {
+    // Thêm >= 2 điểm (lấy toạ độ model bằng `?calibrate`) để thay cho estimate.
+    controlPoints: [],
+    // Ước lượng thô: vị trí trường ±200 m, hướng bắc chưa kiểm chứng, và giả
+    // định file export theo mm trong khi node scale 0.01 coi đó là cm.
+    estimate: {
+      lngLat: [106.6825, 10.7612],
+      model: [290, -807],
+      metersPerUnit: 0.1,
+      rotationDeg: 0,
+    },
+  },
+  zoom: {
+    tileSize: 512,
+    min: 13,
+    max: 20.5,
+    initial: 18, // Khớp khung nhìn cũ (~3.500 đơn vị) với scale ước lượng
+    modelFade: [15.5, 16],
+    contextGhost: [16, 17],
+    ghostOpacity: 0.3,
+    maxPanMeters: 1200,
+  },
+  context: {
+    basemapManifest: `${baseUrl}context/basemaps.json`,
+    defaultBasemap: "now",
+    blocks: `${baseUrl}context/blocks.geojson`,
+    groundY: 0,
+    blockColor: "#f4f2ed",
+    blockEdgeColor: "#8c8c8c",
+    defaultBlockHeight: 9,
   },
   debug: {
     showWorldAxes: false,
