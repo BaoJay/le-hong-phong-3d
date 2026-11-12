@@ -9,6 +9,13 @@ export interface Building {
   labelPos: [number, number, number];
 }
 
+/** Nhãn chung của trường, chỉ hiện khi zoom xa (GLB đang ẩn). */
+export const CAMPUS_LABEL = {
+  id: "campus",
+  label: "THPT chuyên Lê Hồng Phong",
+  labelPos: [290, 60, -807] as [number, number, number],
+};
+
 export const BUILDINGS: readonly Building[] = [
   {
     id: "khu-a",

@@ -1,6 +1,6 @@
 import "./styles.css";
 import { inject } from "@vercel/analytics";
-import { BUILDINGS } from "./data/buildings";
+import { BUILDINGS, CAMPUS_LABEL } from "./data/buildings";
 import { createInfoPanel } from "./ui/info-panel";
 import { formatFileSize } from "./utils/format";
 import { viewerConfig } from "./config/viewer-config";
@@ -52,6 +52,14 @@ const zoomInBtn       = document.getElementById("zoom-in-btn");
 const zoomOutBtn      = document.getElementById("zoom-out-btn");
 const toggleRotateBtn = document.getElementById("toggle-rotate-btn");
 const perspectiveBtn  = document.getElementById("perspective-btn");
+const zoomLevelOutput = document.getElementById("zoom-level");
+const mapAttribution  = document.getElementById("map-attribution");
+
+// `?calibrate`: click lên model để lấy toạ độ cho geo.controlPoints.
+// `?basemap=<id>`: xem thử một basemap khác trong public/context/basemaps.json.
+const searchParams = new URLSearchParams(window.location.search);
+const calibrateMode = searchParams.has("calibrate");
+const basemapOverride = searchParams.get("basemap");
 
 function enterExplorerView() {
   if (app.classList.contains("view-explorer")) return;
@@ -99,6 +107,10 @@ const viewer = createViewer({
   config: viewerConfig,
 
   onObjectClick(point) {
+    if (calibrateMode) {
+      showCalibrationPoint(point);
+      return;
+    }
     let nearest = BUILDINGS[0];
     let minDist = Infinity;
     for (const b of BUILDINGS) {
@@ -179,6 +191,19 @@ const viewer = createViewer({
     }
   },
 
+  onZoomChange(zoom) {
+    if (zoomLevelOutput) zoomLevelOutput.textContent = `z${zoom.toFixed(1)}`;
+    app.classList.toggle("is-zoomed-out", zoom < viewerConfig.zoom.modelFade[1]);
+  },
+
+  onBasemapChange(basemap) {
+    if (!mapAttribution) return;
+    mapAttribution.hidden = !basemap;
+    mapAttribution.textContent = basemap
+      ? `${basemap.label} · ${basemap.attribution}`
+      : "";
+  },
+
   onError(message) {
     onboarding.setModelError(message);
     errorBanner.hidden = false;
@@ -232,7 +257,44 @@ const labelDefs = BUILDINGS.map((building) => {
   return { el, pos: building.labelPos, building };
 });
 
-viewer.setLabels(labelDefs.map(({ el, pos }) => ({ el, pos })));
+const campusLabel = document.createElement("div");
+campusLabel.className = `blabel blabel--${CAMPUS_LABEL.id}`;
+campusLabel.innerHTML = `
+  <div class="blabel-inner">
+    <span class="blabel-text">${CAMPUS_LABEL.label}</span>
+    <div class="blabel-line"></div>
+  </div>
+`;
+campusLabel.style.cursor = "pointer";
+campusLabel.addEventListener("click", () => viewer.resetViewAnimated());
+explorerOverlay.appendChild(campusLabel);
+
+viewer.setLabels([
+  ...labelDefs.map(({ el, pos }) => ({ el, pos })),
+  { el: campusLabel, pos: CAMPUS_LABEL.labelPos },
+]);
+
+// ── Geo calibration ───────────────────────────────────────────────────────────
+let calibrationPanel: HTMLElement | null = null;
+
+function showCalibrationPoint(point: [number, number, number]) {
+  const [lon, lat] = viewer.modelToLngLat(point);
+  const entry = `{ model: [${point[0].toFixed(2)}, ${point[2].toFixed(2)}], lngLat: [LON, LAT] },`;
+  console.info(`[calibrate] ${entry}  // ước lượng hiện tại: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+
+  if (!calibrationPanel) {
+    calibrationPanel = document.createElement("div");
+    calibrationPanel.className = "calibrate-panel";
+    document.body.appendChild(calibrationPanel);
+  }
+  calibrationPanel.textContent =
+    `Điểm vừa chọn (thay LON, LAT bằng toạ độ thật):\n${entry}\n` +
+    `Ước lượng hiện tại: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+if (basemapOverride) {
+  void viewer.setBasemap(basemapOverride);
+}
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 void viewer.load().catch(() => {
