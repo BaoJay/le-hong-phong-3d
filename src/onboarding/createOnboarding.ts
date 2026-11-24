@@ -165,6 +165,18 @@ function stops(x: number, pts: readonly (readonly [number, number])[]): number {
   return pts[pts.length - 1][1];
 }
 
+/** Where the visitor's OS turns animations back on. */
+function motionSettingPath(): string {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua))
+    return "Settings → Accessibility → Motion → Reduce Motion: Off";
+  if (/Mac/.test(ua))
+    return "System Settings → Accessibility → Display → Reduce motion: Off";
+  if (/Android/.test(ua))
+    return "Settings → Accessibility → Remove animations: Off";
+  return "Settings → Accessibility → Visual effects → Animation effects: On";
+}
+
 /* ─── Public API ───────────────────────────────────────────────────────────── */
 
 export interface OnboardingApi {
@@ -190,7 +202,9 @@ export function createOnboarding({
   onRetry,
   baseUrl = "/",
 }: OnboardingOptions): OnboardingApi {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // Re-read live: a visitor who follows the tip below gets full motion without reloading.
+  let reduced = motionQuery.matches;
 
   /* ── DOM ─────────────────────────────────────────────────────────────────── */
 
@@ -230,6 +244,14 @@ export function createOnboarding({
 
   root.innerHTML = `
     <button class="ob-skip" type="button" data-ob="skip">Bỏ qua giới thiệu</button>
+    <details class="ob-motion-tip">
+      <summary>Hiệu ứng chuyển động đang tắt</summary>
+      <div class="ob-motion-tip__panel">
+        <p>Để xem trọn trải nghiệm, hãy bật lại hiệu ứng chuyển động trên thiết bị:</p>
+        <code>${motionSettingPath()}</code>
+        <p class="ob-motion-tip__note">Trang thường tự cập nhật ngay; nếu không, hãy tải lại trang.</p>
+      </div>
+    </details>
     <div class="onboarding__scroller" data-ob="scroller">
       <div class="onboarding__track" data-ob="track">
         <div class="onboarding__stage" data-ob="stage">
@@ -271,8 +293,6 @@ export function createOnboarding({
               <button class="ob-btn ob-btn--ghost" type="button" data-ob="enter">Bỏ qua</button>
             </div>
           </div>
-
-          ${reduced ? `<div class="ob-enter"><button class="ob-btn ob-btn--primary" type="button" data-ob="enter-reduced" hidden>Nhấn để bắt đầu</button></div>` : ""}
 
         </div>
       </div>
@@ -316,9 +336,6 @@ export function createOnboarding({
     depth: PHOTOS[i].depth,
     dir: PHOTOS[i].dir,
   }));
-  const enterReduced = root.querySelector<HTMLButtonElement>(
-    '[data-ob="enter-reduced"]',
-  );
 
   document.body.appendChild(root);
 
@@ -375,7 +392,13 @@ export function createOnboarding({
   // The "leave a note" flow does not exist yet — both actions enter the site.
   pick<HTMLButtonElement>("leave-note").addEventListener("click", complete);
   pick<HTMLButtonElement>("enter").addEventListener("click", complete);
-  enterReduced?.addEventListener("click", complete);
+
+  const onMotionChange = (ev: MediaQueryListEvent) => {
+    reduced = ev.matches;
+    root.classList.toggle("onboarding--reduced", reduced);
+    lastScroll = -1; // force a redraw with the new motion rules
+  };
+  motionQuery.addEventListener("change", onMotionChange);
 
   /* ── Frame loop ──────────────────────────────────────────────────────────── */
 
@@ -485,15 +508,6 @@ export function createOnboarding({
 
     const logoIn = smooth(clamp((t - (restAt + 160)) / 950));
 
-    if (reduced) {
-      if (logoIn !== lastLogoIn) {
-        lastLogoIn = logoIn;
-        el.logo.style.opacity = String(logoIn);
-        if (enterReduced) enterReduced.hidden = logoIn < 0.9;
-      }
-      return;
-    }
-
     if (!unlocked && runEndAt !== null && t > restAt + 650) {
       unlocked = true;
       el.scroller.style.overflowY = "auto";
@@ -563,6 +577,9 @@ export function createOnboarding({
       [A + 10, 0],
       [A + 230, 88],
     ]);
+    // Reduced motion keeps the photos and their fades, but drops the drift,
+    // pointer parallax and split — the movement that isn't plain scrolling.
+    const motion = reduced ? 0 : 1;
     for (let i = 0; i < photos.length; i++) {
       const f = photos[i];
       const inOp = ease(clamp((sc - 20 - i * 12) / 90));
@@ -573,10 +590,11 @@ export function createOnboarding({
           [0, 20],
           [A, 0],
         ]) *
-        (0.5 + f.depth * 0.18);
-      const px = (-mx * f.depth * 16).toFixed(2);
-      const py = (-my * f.depth * 12).toFixed(2);
-      const dx = (f.dir * split * (0.6 + f.depth * 0.18)).toFixed(2);
+        (0.5 + f.depth * 0.18) *
+        motion;
+      const px = (-mx * f.depth * 16 * motion).toFixed(2);
+      const py = (-my * f.depth * 12 * motion).toFixed(2);
+      const dx = (f.dir * split * (0.6 + f.depth * 0.18) * motion).toFixed(2);
       f.node.style.transform = `translate3d(calc(${dx}vw + ${px}px), calc(${rise.toFixed(2)}vh + ${py}px), 0)`;
     }
 
@@ -636,6 +654,7 @@ export function createOnboarding({
     window.clearInterval(guard);
     window.removeEventListener("mousemove", onPointerMove);
     window.removeEventListener("keydown", onKeyDown);
+    motionQuery.removeEventListener("change", onMotionChange);
     root.remove();
   }
 
