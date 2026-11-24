@@ -403,29 +403,87 @@
   border-color: rgba(0, 0, 0, 0.32);
 }
 
-/* ─── Reduced motion — no scroll journey, just counter → enter ───────────── */
-.onboarding--reduced .onboarding__track {
-  height: 100vh;
-}
-
-.onboarding--reduced .ob-gallery,
-.onboarding--reduced .ob-roof,
-.onboarding--reduced .ob-headline,
-.onboarding--reduced .ob-scroll-hint {
-  display: none;
-}
-
+/* ─── Reduced motion — same journey, no drift/parallax/looping nudge ─────── */
 .onboarding--reduced .ob-year {
   filter: none !important;
 }
 
-.onboarding--reduced .ob-enter {
+.onboarding--reduced .ob-scroll-hint svg {
+  animation: none;
+}
+
+/* Tip telling the visitor how to turn motion back on — reduced mode only. */
+.ob-motion-tip {
+  display: none;
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 7vh;
-  display: flex;
-  justify-content: center;
+  top: 1.6rem;
+  left: 1.8rem;
+  z-index: 3;
+  max-width: min(320px, calc(100vw - 2rem));
+  font-family: "Inter", sans-serif;
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.onboarding--reduced .ob-motion-tip {
+  display: block;
+}
+
+.ob-motion-tip summary {
+  display: inline-block;
+  cursor: pointer;
+  list-style: none;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing: 0.06em;
+  padding: 0.4rem 0.95rem;
+}
+
+.ob-motion-tip summary::-webkit-details-marker {
+  display: none;
+}
+
+.ob-motion-tip summary::before {
+  content: "ⓘ ";
+}
+
+.ob-motion-tip[open] summary,
+.ob-motion-tip summary:hover {
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.32);
+}
+
+.ob-motion-tip__panel {
+  margin-top: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  line-height: 1.5;
+}
+
+.ob-motion-tip__panel p {
+  margin: 0;
+}
+
+.ob-motion-tip__panel code {
+  display: block;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: #f3f3f1;
+  color: #1a1a1a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.ob-motion-tip__note {
+  color: #8a8a8a;
 }
 
 /* ─── Small screens ──────────────────────────────────────────────────────── */
@@ -442,5 +500,11 @@
   .ob-skip {
     top: 1rem;
     right: 1rem;
+  }
+
+  .ob-motion-tip {
+    top: 1rem;
+    left: 1rem;
+    max-width: calc(100vw - 2rem);
   }
 }
