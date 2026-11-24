@@ -1,4 +1,5 @@
 import type { ViewerConfig } from "../viewer/types";
+import { modelAsset } from "./model-asset";
 
 const baseUrl = import.meta.env.BASE_URL;
 
@@ -8,7 +9,10 @@ export const viewerConfig: ViewerConfig = {
     subtitle: "Dự án kỉ niệm 100 năm LHP",
   },
   model: {
-    src: `${baseUrl}models/LHP100_20261005-draco.glb`,
+    // Model đã được tối ưu + mã hoá bởi `npm run protect:model` (xem docs/model-protection.md)
+    src: `${baseUrl}${modelAsset.path}`,
+    keyEndpoint: `${baseUrl}api/model-key`,
+    expectedBytes: modelAsset.byteLength,
     fitPadding: 1.45,
     initialRotation: [0, 0, 0],
     initialScale: 1,
@@ -74,6 +78,8 @@ export const viewerConfig: ViewerConfig = {
     errorTitle: "Sự cố tải mô hình",
     modelLoadError:
       "Không thể tải file GLB. Hãy kiểm tra lại đường dẫn model hoặc xuất lại asset.",
+    modelKeyError:
+      "Không thể xác thực quyền xem mô hình. Hãy tải lại trang hoặc thử lại sau.",
     decoderLoadError:
       "Bộ giải nén Draco chưa sẵn sàng. Hãy kiểm tra thư mục public/draco trước khi deploy.",
     resetButton: "Đặt lại góc nhìn",

@@ -31,6 +31,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { loadProtectedModel, ModelKeyError } from "./protected-model";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type {
   LoadingProgress,
@@ -682,27 +683,19 @@ export function createViewer({
     destroy,
   };
 
-  function loadGltfWithProgress(
+  async function loadGltfWithProgress(
     handleProgress: (progress: LoadingProgress) => void,
   ): Promise<GLTF> {
-    return new Promise((resolve, reject) => {
-      gltfLoader.load(
-        config.model.src,
-        resolve,
-        (event: ProgressEvent) => {
-          const total = event.total ?? 0;
-          const loaded = event.loaded ?? 0;
-          const progress = total > 0 ? loaded / total : null;
+    const glb = await loadProtectedModel(
+      {
+        src: config.model.src,
+        keyEndpoint: config.model.keyEndpoint,
+        expectedBytes: config.model.expectedBytes,
+      },
+      handleProgress,
+    );
 
-          handleProgress({
-            loaded,
-            total,
-            progress,
-          });
-        },
-        reject,
-      );
-    });
+    return gltfLoader.parseAsync(glb, "");
   }
 }
 
@@ -998,6 +991,10 @@ function disposeMaterial(material: Material) {
 function mapViewerError(error: unknown, config: ViewerConfig) {
   const rawMessage = error instanceof Error ? error.message : String(error);
   const normalized = rawMessage.toLowerCase();
+
+  if (error instanceof ModelKeyError) {
+    return `${config.ui.modelKeyError} (${rawMessage})`;
+  }
 
   if (normalized.includes("draco") || normalized.includes("decoder")) {
     return `${config.ui.decoderLoadError} (${rawMessage})`;
