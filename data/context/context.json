@@ -1,0 +1,49 @@
+{
+  "center": [106.6825, 10.7612],
+  "basemapRadiusMeters": 1000,
+  "blocksRadiusMeters": 500,
+  "schoolName": "Lê Hồng Phong",
+  "basemaps": [
+    {
+      "id": "1923",
+      "label": "Saigon – Cholon 1923",
+      "year": 1923,
+      "url": "https://allmaps.xyz/{z}/{x}/{y}.png?url=https%3A%2F%2Fmaparchive.vn%2Fapi%2Fmaps%2F1bce28f0-aa82-48eb-8e33-8f0b07182c2f%2Fannotation",
+      "zoom": 18,
+      "attribution": "maparchive.vn · Allmaps"
+    },
+    {
+      "id": "1942",
+      "label": "Plan de Saigon 1942",
+      "year": 1942,
+      "url": "https://allmaps.xyz/{z}/{x}/{y}.png?url=https%3A%2F%2Fmaparchive.vn%2Fapi%2Fmaps%2F6989a04e-0f51-439e-9390-a6678aff374c%2Fannotation",
+      "zoom": 18,
+      "attribution": "maparchive.vn · Allmaps"
+    },
+    {
+      "id": "1959",
+      "label": "Đô thành Sài Gòn 1959",
+      "year": 1959,
+      "url": "https://allmaps.xyz/{z}/{x}/{y}.png?url=https%3A%2F%2Fmaparchive.vn%2Fapi%2Fmaps%2F34d4edb2-f7df-4c47-a65a-f6b471400396%2Fannotation",
+      "zoom": 18,
+      "attribution": "maparchive.vn · Allmaps"
+    },
+    {
+      "id": "1968",
+      "label": "Sài Gòn 1968",
+      "year": 1968,
+      "url": "https://allmaps.xyz/{z}/{x}/{y}.png?url=https%3A%2F%2Fmaparchive.vn%2Fapi%2Fmaps%2F3a446d85-25a8-4e81-9cfc-8de357c3a5df%2Fannotation",
+      "zoom": 18,
+      "attribution": "maparchive.vn · Allmaps"
+    },
+    {
+      "id": "now",
+      "label": "Bản đồ hiện tại",
+      "year": 2026,
+      "url": "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+      "zoom": 17,
+      "tileSize": 512,
+      "attribution": "© OpenStreetMap contributors © CARTO"
+    }
+  ]
+}
