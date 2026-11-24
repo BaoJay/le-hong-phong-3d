@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "sync:draco": "node scripts/sync-draco.mjs",
     "generate:placeholder-model": "node scripts/generate-placeholder-model.mjs",
-    "postinstall": "npm run sync:draco && npm run generate:placeholder-model"
+    "postinstall": "npm run sync:draco && npm run generate:placeholder-model",
+    "protect:model": "node scripts/protect-model.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

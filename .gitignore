@@ -2,3 +2,8 @@ node_modules
 dist
 
 .DS_Store
+
+# Model gốc (không bao giờ commit) và khoá mã hoá
+models-src/
+.env*.local
+.vercel

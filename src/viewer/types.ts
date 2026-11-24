@@ -25,7 +25,12 @@ export interface ViewerMeta {
 }
 
 export interface ModelConfig {
+  /** URL tới file model đã mã hoá (sinh bởi `npm run protect:model`). */
   src: string;
+  /** Endpoint cấp khoá giải mã (Vercel Function `api/model-key.ts`). */
+  keyEndpoint: string;
+  /** Kích thước file mã hoá, dùng cho progress khi thiếu Content-Length. */
+  expectedBytes?: number;
   fitPadding: number;
   initialRotation?: [number, number, number];
   initialScale?: number;
@@ -98,6 +103,7 @@ export interface UiTextConfig {
   errorStatus: string;
   errorTitle: string;
   modelLoadError: string;
+  modelKeyError: string;
   decoderLoadError: string;
   resetButton: string;
   autoRotateOn: string;

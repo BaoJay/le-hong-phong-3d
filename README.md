@@ -30,7 +30,8 @@ npm run preview
 - `src/viewer/createViewer.ts`: khởi tạo scene, camera, controls, loader và lifecycle của viewer.
 - `src/onboarding/createOnboarding.ts`: màn intro chạy khi mới vào trang, trong lúc tải model 3D.
 - `public/onboarding/`: ảnh cho màn intro (logo, mái ngói, gallery, cánh hoa điệp).
-- `public/models/LHP100_20260607_pk.glb`: model thật đang được viewer tải.
+- `public/m/<hash>.bin`: model thật đã làm sạch + mã hoá, viewer giải mã bằng khoá từ `api/model-key` (xem [docs/model-protection.md](docs/model-protection.md)).
+- `models-src/`: nơi đặt GLB gốc trên máy local – **không commit**.
 - `public/models/le-hong-phong-campus-placeholder.glb`: model placeholder được generate tự động sau `npm install`.
 - `docs/sketchup-to-glb.md`: checklist để thay model SketchUp thật vào app.
 
@@ -59,6 +60,6 @@ cùng nút vào trang.
 
 1. Xuất model từ SketchUp ra `GLB`.
 2. Tối ưu và nén Draco theo hướng dẫn trong [docs/sketchup-to-glb.md](docs/sketchup-to-glb.md).
-3. Đặt file vào `public/models/`.
-4. Cập nhật `src` trong [viewer-config.ts](src/config/viewer-config.ts).
+3. Đặt file vào `models-src/` (không đặt vào `public/`).
+4. Chạy `npm run protect:model -- models-src/<file>.glb` (cần `MODEL_KEY` trong `.env.local`), rồi commit `public/m/*.bin` và `src/config/model-asset.ts`. Chi tiết: [docs/model-protection.md](docs/model-protection.md).
 5. Nếu cần chỉnh hướng model, sửa `initialRotation` hoặc `initialScale` trong cùng config.
