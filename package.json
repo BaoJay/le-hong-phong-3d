@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
-    "three": "^0.179.1"
+    "three": "^0.179.1",
+    "three-mesh-bvh": "^0.10.0"
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.5.1",

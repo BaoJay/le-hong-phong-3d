@@ -11,6 +11,7 @@ Static web app hiển thị model 3D trường THPT Lê Hồng Phong. **Vanilla 
 | Build | Vite | ^7.1 |
 | 3D | Three.js: `GLTFLoader`, `DRACOLoader`, `OrbitControls`, `BufferGeometryUtils` | ^0.179 |
 | UI / CSS | Vanilla DOM + CSS thuần, mỗi module một file `.css` | — |
+| Va chạm (walk mode) | `three-mesh-bvh` (tải lười khi bấm nút đi bộ) | ^0.10 |
 | Analytics | `@vercel/analytics` | ^2.0 |
 | Nén model | `@gltf-transform/cli` (dev) | ^4.5 |
 
@@ -30,6 +31,7 @@ SketchUp → GLB → gltf-transform optimize --compress draco → public/models/
 src/main.ts           entry
 src/viewer/           scene, renderer, loader (createViewer.ts)
 src/onboarding/       intro chạy theo tiến trình tải model
+src/walk/             chế độ đi bộ góc nhìn thứ nhất (docs/walk-mode.md)
 src/config/ data/ ui/ utils/
 src/coming-soon/      trang tạm
 public/models/ draco/ onboarding/

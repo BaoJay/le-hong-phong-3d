@@ -28,12 +28,21 @@ npm run preview
 
 - `src/config/viewer-config.ts`: cấu hình metadata, model, Draco, ánh sáng và text UI.
 - `src/viewer/createViewer.ts`: khởi tạo scene, camera, controls, loader và lifecycle của viewer.
+- `src/walk/`: chế độ đi bộ góc nhìn thứ nhất (va chạm, input, HUD), xem [docs/walk-mode.md](docs/walk-mode.md).
 - `src/onboarding/createOnboarding.ts`: màn intro chạy khi mới vào trang, trong lúc tải model 3D.
 - `public/onboarding/`: ảnh cho màn intro (logo, mái ngói, gallery, cánh hoa điệp).
 - `public/m/<hash>.bin`: model thật đã làm sạch + mã hoá, viewer giải mã bằng khoá từ `api/model-key` (xem [docs/model-protection.md](docs/model-protection.md)).
 - `models-src/`: nơi đặt GLB gốc trên máy local – **không commit**.
 - `public/models/le-hong-phong-campus-placeholder.glb`: model placeholder được generate tự động sau `npm install`.
 - `docs/sketchup-to-glb.md`: checklist để thay model SketchUp thật vào app.
+
+## Chế độ đi bộ (prototype)
+
+Ở chế độ khám phá, nút **người đi bộ** đưa camera xuống tầm mắt và cho phép đi bộ
+góc nhìn thứ nhất trong khuôn viên: `WASD`/chuột trên desktop, joystick ảo trên
+điện thoại, va chạm bằng `three-mesh-bvh`. Thêm `?walkdebug` vào URL để xem và
+chép toạ độ. Mở `/walk-test.html` khi chạy `npm run dev` để vào sân thử.
+Chi tiết: [docs/walk-mode.md](docs/walk-mode.md).
 
 ## Màn onboarding
 
