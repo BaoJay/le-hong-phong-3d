@@ -15,7 +15,8 @@ export const viewerConfig: ViewerConfig = {
     expectedBytes: modelAsset.byteLength,
     fitPadding: 1.45,
     initialRotation: [0, 0, 0],
-    initialScale: 1,
+    // Model LHP100_20261005 xuất theo đơn vị decimet; ×0.1 để về mét như mọi toạ độ trong config.
+    initialScale: 0.1,
     enableGround: true,
     enableShadows: true,
     edges: {
@@ -57,6 +58,23 @@ export const viewerConfig: ViewerConfig = {
     dampingFactor: 0.06,
     stopAutoRotateOnInteract: true,
     orbitTarget: [50, 0, -80], // Tâm xoay tại tim sân trường khu A
+  },
+  walk: {
+    // Điểm xuất phát: tim sân trường khu A, nhìn về dãy nhà A.
+    // Mở trang với `?walkdebug` rồi nhấn C để chép toạ độ đang đứng.
+    spawn: [50, 0, -80],
+    spawnLookAt: [47, 1.6, -45],
+    height: 1.75,
+    radius: 0.3,
+    eyeHeight: 1.62,
+    walkSpeed: 2.4,
+    runSpeed: 5,
+    gravity: -20,
+    stepDown: 0.45,
+    near: 0.05,
+    far: 1500,
+    fog: { near: 40, far: 320 },
+    transitionSeconds: 1.6,
   },
   debug: {
     showWorldAxes: false,

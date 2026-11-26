@@ -1,3 +1,6 @@
+import type { WalkInputSource, WalkPose } from "../walk/walk-controller";
+import type { WalkModeConfig } from "../walk/walk-session";
+
 export type ViewerStatus = "idle" | "loading" | "ready" | "error";
 
 export interface LoadingProgress {
@@ -16,6 +19,14 @@ export interface ViewerApi {
   zoomOut(): void;
   setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]): void;
   focusOnPoint(center: [number, number, number], panelWidthFraction?: number): void;
+  /**
+   * Bay camera xuống tầm mắt và bật điều khiển góc nhìn thứ nhất. Trả `true`
+   * nếu đã vào được chế độ đi bộ (false nếu bị `exitWalkMode` huỷ giữa chừng).
+   */
+  enterWalkMode(input: WalkInputSource, onPose?: (pose: WalkPose) => void): Promise<boolean>;
+  /** Bay camera về góc nhìn toàn cảnh ban đầu và trả quyền cho OrbitControls. */
+  exitWalkMode(): Promise<void>;
+  isWalkMode(): boolean;
   destroy(): void;
 }
 
@@ -118,5 +129,6 @@ export interface ViewerConfig {
   camera: ViewerCameraConfig;
   controls: ViewerControlsConfig;
   debug?: ViewerDebugConfig;
+  walk: WalkModeConfig;
   ui: UiTextConfig;
 }

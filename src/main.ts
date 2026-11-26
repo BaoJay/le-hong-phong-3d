@@ -6,6 +6,7 @@ import { formatFileSize } from "./utils/format";
 import { viewerConfig } from "./config/viewer-config";
 import { createViewer } from "./viewer/createViewer";
 import { createOnboarding } from "./onboarding/createOnboarding";
+import type { WalkHud } from "./walk/walk-hud";
 
 inject();
 
@@ -209,6 +210,76 @@ navKienTruc?.addEventListener("click", (e) => {
   enterExplorerView();
 });
 
+// ── Walk mode (first-person prototype) ───────────────────────────────────────
+const walkBtn = document.getElementById("walk-btn");
+// HUD + vật lý va chạm chỉ được tải khi người dùng bấm nút đi bộ lần đầu.
+let walkHud: WalkHud | null = null;
+let walkStarting = false;
+
+async function getWalkHud(): Promise<WalkHud> {
+  if (walkHud) return walkHud;
+  const { createWalkHud } = await import("./walk/walk-hud");
+  walkHud ??= createWalkHud({
+    mount: app,
+    onExit: () => void leaveWalkMode(),
+    debug: new URLSearchParams(window.location.search).has("walkdebug"),
+  });
+  return walkHud;
+}
+
+async function startWalkMode() {
+  if (walkStarting || viewer.isWalkMode() || !app.classList.contains("is-loaded")) return;
+  walkStarting = true;
+  try {
+    await runWalkMode();
+  } finally {
+    walkStarting = false;
+  }
+}
+
+async function runWalkMode() {
+  enterExplorerView();
+  if (panel.isOpen) panel.close();
+  app.classList.add("view-walk");
+  let hud: WalkHud;
+  try {
+    hud = await getWalkHud();
+  } catch (error) {
+    console.error("[walk] Không tải được module đi bộ", error);
+    app.classList.remove("view-walk");
+    return;
+  }
+  hud.showPreparing();
+  // Cho HUD kịp vẽ "Đang chuẩn bị…" trước khi dựng BVH (chặn main thread).
+  await nextFrame();
+  await nextFrame();
+  try {
+    const entered = await viewer.enterWalkMode(hud.input, (pose) => hud.setPose(pose));
+    if (entered) hud.activate();
+  } catch (error) {
+    console.error("[walk] Không vào được chế độ đi bộ", error);
+    hud.hide();
+    app.classList.remove("view-walk");
+  }
+}
+
+async function leaveWalkMode() {
+  if (!viewer.isWalkMode()) return;
+  walkHud?.hide();
+  await viewer.exitWalkMode();
+  app.classList.remove("view-walk");
+  walkBtn?.focus({ preventScroll: true });
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+walkBtn?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  void startWalkMode();
+});
+
 // ── 3D label tracking ─────────────────────────────────────────────────────────
 const explorerOverlay = requireElement("explorer-overlay");
 
@@ -239,4 +310,7 @@ void viewer.load().catch(() => {
   // Errors are mapped to the UI layer via onError / onStatusChange.
 });
 
-window.addEventListener("beforeunload", () => viewer.destroy());
+window.addEventListener("beforeunload", () => {
+  walkHud?.dispose();
+  viewer.destroy();
+});

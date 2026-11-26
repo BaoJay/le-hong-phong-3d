@@ -575,6 +575,27 @@ button {
   font-size: 1rem;
 }
 
+/* Walk button appears once the model is on screen. */
+#app:not(.is-loaded) .zoom-btn--walk {
+  display: none;
+}
+.zoom-btn--walk {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}
+.zoom-btn--walk svg circle,
+.zoom-btn--walk svg path {
+  stroke: #fafaf7;
+}
+
+/* ─── Walk mode: hide orbit-view chrome while walking ────────────────────── */
+#app.view-walk .page-layout,
+#app.view-walk .explorer-overlay {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* ─── Info panel ─────────────────────────────────────────────────────────── */
 .info-panel {
   position: fixed;

@@ -33,6 +33,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadProtectedModel, ModelKeyError } from "./protected-model";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type { WalkSession } from "../walk/walk-session";
+import type { WalkInputSource, WalkPose } from "../walk/walk-controller";
 import type {
   LoadingProgress,
   ViewerApi,
@@ -83,6 +85,9 @@ const MAX_RENDER_PIXEL_RATIO = 1.25;
 const MAX_FRAME_DELTA_SECONDS = 1 / 30;
 const DEFAULT_FRAME_DELTA_SECONDS = 1 / 60;
 const CAMERA_ANIMATION_DURATION_SECONDS = 0.55;
+/** Rơi thấp hơn đáy model bao nhiêu mét thì đưa người chơi về điểm xuất phát. */
+const WALK_KILL_DEPTH = 25;
+const MAX_WALK_FRAME_DELTA_SECONDS = 0.1;
 
 interface StaticMeshBucket {
   geometries: BufferGeometry[];
@@ -322,6 +327,7 @@ export function createViewer({
     ndcPointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     ndcPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
+    if (isWalkMode()) return;
     raycaster.setFromCamera(ndcPointer, camera);
     if (modelRoot) {
       const hits = raycaster.intersectObject(modelRoot, true);
@@ -335,6 +341,73 @@ export function createViewer({
 
   let initialViewState: InitialViewState | null = null;
   let modelRoot: Group | null = null;
+  let modelBounds: Box3 | null = null;
+
+  // ── Walk mode (first-person) ─────────────────────────────────────────────
+  // Module đi bộ (kèm three-mesh-bvh) chỉ được tải khi người dùng bấm vào.
+  let walkSession: WalkSession | null = null;
+  let walkSessionPromise: Promise<WalkSession> | null = null;
+
+  function isWalkMode() {
+    return walkSession !== null && walkSession.state !== "idle";
+  }
+
+  async function loadWalkSession(): Promise<WalkSession> {
+    const { createWalkSession } = await import("../walk/walk-session");
+    return createWalkSession({
+      camera,
+      scene,
+      config: config.walk,
+      getWorld: () => {
+        if (!modelRoot || !modelBounds) return null;
+        return {
+          root: modelRoot,
+          // Mặt đất hiển thị cũng là mặt đất va chạm, và là giới hạn đi lại.
+          ground: ground.visible
+            ? { center: ground.position.clone(), halfSize: ground.scale.x / 2 }
+            : undefined,
+          killY: modelBounds.min.y - WALK_KILL_DEPTH,
+        };
+      },
+      onControlChange: (walkHasControl) => {
+        controls.enabled = !walkHasControl;
+        if (walkHasControl) {
+          camAnim = null;
+          setAutoRotate(false);
+          return;
+        }
+        if (initialViewState) controls.target.copy(initialViewState.target);
+        controls.update();
+      },
+      reducedMotion: () =>
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    });
+  }
+
+  async function enterWalkMode(
+    input: WalkInputSource,
+    onPose?: (pose: WalkPose) => void,
+  ): Promise<boolean> {
+    walkSessionPromise ??= loadWalkSession().catch((error) => {
+      walkSessionPromise = null;
+      throw error;
+    });
+    const session = await walkSessionPromise;
+    if (destroyed) return false;
+    walkSession = session;
+    await session.enter(input, onPose);
+    return session.state === "walking";
+  }
+
+  async function exitWalkMode(): Promise<void> {
+    if (!initialViewState) return;
+    if (!walkSession) return;
+    await walkSession.exit({
+      position: initialViewState.position,
+      target: initialViewState.target,
+    });
+  }
+
   let resizeObserver: ResizeObserver | null = null;
   let destroyed = false;
   let loadPromise: Promise<void> | null = null;
@@ -359,13 +432,21 @@ export function createViewer({
   const animate = (time = 0) => {
     if (destroyed) return;
 
-    const deltaTime =
+    const rawDeltaTime =
       lastFrameTime > 0
-        ? Math.min((time - lastFrameTime) / 1000, MAX_FRAME_DELTA_SECONDS)
+        ? (time - lastFrameTime) / 1000
         : DEFAULT_FRAME_DELTA_SECONDS;
+    const deltaTime = Math.min(rawDeltaTime, MAX_FRAME_DELTA_SECONDS);
     lastFrameTime = time;
 
-    if (camAnim) {
+    // Walk mode dùng giới hạn rộng hơn để máy yếu (~20fps) không bị đi chậm
+    // lại; vật lý tự chia bước con nên vẫn không xuyên tường.
+    const walkHasCamera =
+      walkSession?.update(Math.min(rawDeltaTime, MAX_WALK_FRAME_DELTA_SECONDS)) ??
+      false;
+    if (walkHasCamera) {
+      // Walk mode tự đặt vị trí + hướng camera.
+    } else if (camAnim) {
       camAnim.progress = Math.min(
         camAnim.progress + deltaTime / CAMERA_ANIMATION_DURATION_SECONDS,
         1,
@@ -383,7 +464,7 @@ export function createViewer({
       controls.update(deltaTime);
     }
 
-    updateTrackedLabels();
+    if (!walkHasCamera) updateTrackedLabels();
     renderer.render(scene, camera);
   };
 
@@ -455,6 +536,7 @@ export function createViewer({
         disposeObject(modelRoot);
       }
 
+      walkSession?.invalidate();
       modelRoot = gltf.scene;
       modelRoot.name = "LeHongPhongCampus";
 
@@ -474,6 +556,7 @@ export function createViewer({
         throw new Error("Model loaded but did not contain visible geometry.");
       }
 
+      modelBounds = bounds;
       fitCameraToBounds(bounds);
       updateSunLight(bounds);
       updateGround(bounds);
@@ -657,6 +740,7 @@ export function createViewer({
     resizeObserver = null;
     controls.removeEventListener("start", stopAutoRotateOnInteract);
     controls.dispose();
+    walkSession?.dispose();
 
     if (modelRoot) {
       scene.remove(modelRoot);
@@ -680,6 +764,9 @@ export function createViewer({
     zoomOut,
     setLabels,
     focusOnPoint,
+    enterWalkMode,
+    exitWalkMode,
+    isWalkMode,
     destroy,
   };
 
