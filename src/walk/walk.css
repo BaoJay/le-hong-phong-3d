@@ -232,6 +232,34 @@
   transform: translate(-50%, -50%);
 }
 
+/* Jump button (touch) */
+.walk-jump {
+  display: none;
+  position: absolute;
+  right: max(1.5rem, env(safe-area-inset-right));
+  bottom: max(2rem, env(safe-area-inset-bottom));
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(42, 42, 42, 0.45);
+  color: #fafaf7;
+  font: inherit;
+  font-size: 0.85rem;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.walk-jump:active {
+  background: rgba(42, 42, 42, 0.7);
+}
+@media (pointer: coarse) {
+  .walk-hud:not(.has-card):not(.is-preparing) .walk-jump {
+    display: block;
+  }
+}
+
 /* Debug readout (?walkdebug) */
 .walk-debug {
   position: absolute;

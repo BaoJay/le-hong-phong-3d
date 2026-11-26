@@ -37,6 +37,7 @@ export function createWalkHud({ mount, onExit, debug = false }: WalkHudOptions):
     <div class="walk-surface" aria-hidden="true"></div>
     <div class="walk-crosshair" aria-hidden="true"></div>
     <div class="walk-joystick" aria-hidden="true"><span class="walk-joystick__knob"></span></div>
+    <button class="walk-jump" type="button">Nhảy</button>
     <div class="walk-topbar">
       <p class="walk-topbar__title">Đi bộ trong khuôn viên</p>
       <button class="walk-exit" type="button">
@@ -50,12 +51,14 @@ export function createWalkHud({ mount, onExit, debug = false }: WalkHudOptions):
         <li><span><kbd class="walk-kbd">W</kbd><kbd class="walk-kbd">A</kbd><kbd class="walk-kbd">S</kbd><kbd class="walk-kbd">D</kbd></span>Di chuyển</li>
         <li><span><kbd class="walk-kbd">Chuột</kbd></span>Nhìn xung quanh</li>
         <li><span><kbd class="walk-kbd">Shift</kbd></span>Đi nhanh</li>
+        <li><span><kbd class="walk-kbd">Space</kbd></span>Nhảy</li>
         <li><span><kbd class="walk-kbd">R</kbd></span>Về điểm xuất phát</li>
         <li><span><kbd class="walk-kbd">Esc</kbd></span>Tạm dừng · nhấn lần nữa để rời khỏi</li>
       </ul>
       <ul class="walk-card__keys walk-only-coarse">
         <li><span class="walk-card__touch">Trái</span>Kéo để di chuyển</li>
         <li><span class="walk-card__touch">Phải</span>Kéo để nhìn xung quanh</li>
+        <li><span class="walk-card__touch">Nhảy</span>Chạm nút để nhảy qua gờ</li>
       </ul>
       <button class="walk-card__start" type="button">Bắt đầu</button>
     </div>
@@ -105,6 +108,11 @@ export function createWalkHud({ mount, onExit, debug = false }: WalkHudOptions):
     if (!coarseQuery.matches) input.requestPointerLock();
   });
   exitButton.addEventListener("click", () => onExit());
+  // pointerdown thay vì click: nhảy ngay khi chạm, không chờ nhấc ngón tay.
+  query(".walk-jump").addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    input.jump();
+  });
 
   const onDebugKey = (event: KeyboardEvent) => {
     if (!debug || !active || event.code !== "KeyC" || !lastPose) return;

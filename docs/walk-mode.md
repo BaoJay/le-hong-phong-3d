@@ -11,6 +11,7 @@ trong khuôn viên. Chế độ quỹ đạo cũ giữ nguyên; đi bộ chỉ l
 | Di chuyển | `W A S D` hoặc phím mũi tên | Kéo nửa trái màn hình (joystick ảo) |
 | Nhìn | Chuột (khoá con trỏ sau khi bấm **Bắt đầu**) | Kéo nửa phải màn hình |
 | Đi nhanh | Giữ `Shift` | — |
+| Nhảy (qua gờ cao ~1 m) | `Space` | Nút **Nhảy** góc dưới bên phải |
 | Về điểm xuất phát | `R` | — |
 | Tạm dừng / rời khỏi | `Esc` (lần 1 tạm dừng, lần 2 rời khỏi) | Nút **Rời khỏi** |
 

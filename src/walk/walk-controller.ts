@@ -10,6 +10,7 @@ export interface WalkInputSource {
   /** Lượng xoay tích luỹ (radian) kể từ lần gọi trước. */
   consumeLook(): { yaw: number; pitch: number };
   consumeRespawn(): boolean;
+  consumeJump(): boolean;
 }
 
 export interface WalkPhysicsSettings {
@@ -54,6 +55,8 @@ const PHYSICS_SUBSTEPS = 5;
 const MAX_PITCH = MathUtils.degToRad(85);
 const GROUND_ACCELERATION = 14;
 const AIR_ACCELERATION = 2;
+/** Vận tốc bật lên (m/s): với gravity -20 chân nhấc ~0.75 m, cộng phần capsule tự bước ~0.3 m là qua gờ ~1 m. */
+const JUMP_SPEED = 5.5;
 /** Mặt dốc hơn 45° không tính là sàn: người chơi trượt xuống thay vì leo lên. */
 const MIN_GROUND_NORMAL_Y = Math.cos(MathUtils.degToRad(45));
 
@@ -197,6 +200,12 @@ export function createWalkController(
 
     const accel = nearGround ? GROUND_ACCELERATION : AIR_ACCELERATION;
     horizontal.lerp(wish, 1 - Math.exp(-accel * dt));
+
+    // `velocity.y <= 0`: không nhảy tiếp khi vừa bật lên mà tia dò sàn vẫn còn chạm.
+    if (input.consumeJump() && nearGround && velocity.y <= 0) {
+      velocity.y = JUMP_SPEED;
+      onGround = false;
+    }
 
     const wasOnGround = onGround;
     const startY = position.y;

@@ -17,6 +17,8 @@ export interface WalkInput extends WalkInputSource {
   setEnabled(enabled: boolean): void;
   /** Tạm dừng: bỏ qua di chuyển / nhìn, nhưng vẫn nhận Esc để thoát. */
   setPaused(paused: boolean): void;
+  /** Nhảy từ nút trên màn hình cảm ứng. */
+  jump(): void;
   requestPointerLock(): void;
   exitPointerLock(): void;
   isPointerLocked(): boolean;
@@ -59,6 +61,7 @@ export function createWalkInput({
   let lookYaw = 0;
   let lookPitch = 0;
   let respawn = false;
+  let jump = false;
   let enabled = false;
   let paused = false;
   let lockFailed = false;
@@ -111,6 +114,7 @@ export function createWalkInput({
     event.preventDefault();
     if (paused) return;
     if (event.code === "KeyR" && !event.repeat) respawn = true;
+    if (event.code === "Space" && !event.repeat) jump = true;
     keys.add(event.code);
     recomputeMove();
   }
@@ -277,6 +281,14 @@ export function createWalkInput({
       const value = respawn;
       respawn = false;
       return value;
+    },
+    consumeJump() {
+      const value = jump;
+      jump = false;
+      return value;
+    },
+    jump() {
+      if (enabled && !paused) jump = true;
     },
     setEnabled(next) {
       enabled = next;

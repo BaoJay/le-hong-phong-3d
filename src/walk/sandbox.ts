@@ -137,6 +137,7 @@ const scriptedSource = {
     return look;
   },
   consumeRespawn: () => false,
+  consumeJump: () => false,
 };
 Object.assign(window, {
   __walkTest: {
