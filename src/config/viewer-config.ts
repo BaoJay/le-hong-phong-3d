@@ -15,7 +15,8 @@ export const viewerConfig: ViewerConfig = {
     expectedBytes: modelAsset.byteLength,
     fitPadding: 1.45,
     initialRotation: [0, 0, 0],
-    initialScale: 1,
+    // Model LHP100_20261005 xuất theo đơn vị decimet; ×0.1 để về mét như mọi toạ độ trong config.
+    initialScale: 0.1,
     enableGround: true,
     enableShadows: true,
     edges: {
