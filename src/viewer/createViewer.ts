@@ -7,8 +7,10 @@ import {
   DirectionalLight,
   EdgesGeometry,
   Fog,
+  GridHelper,
   Group,
   HemisphereLight,
+  Line,
   LineBasicMaterial,
   LineSegments,
   Matrix4,
@@ -250,6 +252,28 @@ export function createViewer({
     }));
   }
 
+  // Debug only: ground grid (2 m cells, 10 m major lines) + vertical red rays,
+  // all drawn on top of the model (depthTest off) so nothing hides them.
+  function showDebugGuides(points: [number, number, number][]) {
+    for (const [divisions, opacity] of [[300, 0.25], [60, 0.6]] as const) {
+      const grid = new GridHelper(600, divisions, 0x0066ff, 0x0066ff);
+      const mat = grid.material as LineBasicMaterial;
+      Object.assign(mat, { transparent: true, opacity, depthTest: false });
+      grid.renderOrder = 998;
+      scene.add(grid);
+    }
+    worldAxes.visible = true;
+    const material = new LineBasicMaterial({ color: 0xff0000, depthTest: false });
+    for (const [x, y, z] of points) {
+      const line = new Line(
+        new BufferGeometry().setFromPoints([new Vector3(x, y, z), new Vector3(x, y + 200, z)]),
+        material,
+      );
+      line.renderOrder = 999;
+      scene.add(line);
+    }
+  }
+
   // ── Camera focus animation ───────────────────────────────────────────────
   interface CamAnim {
     startPos: Vector3;
@@ -276,16 +300,16 @@ export function createViewer({
   function focusOnPoint(
     centerArr: [number, number, number],
     panelWidthFraction = 0,
+    zoomMax = false,
   ) {
     const target = new Vector3(...centerArr);
     // Use the animation destination if mid-flight, so direction/distance are consistent.
     const refPos = camAnim ? camAnim.endPos : camera.position;
     const refTarget = camAnim ? camAnim.endTarget : controls.target;
     const dir = new Vector3().subVectors(refPos, refTarget).normalize();
-    const newDist = Math.max(
-      refPos.distanceTo(refTarget) * 0.38,
-      controls.minDistance * 2,
-    );
+    const newDist = zoomMax
+      ? controls.minDistance
+      : Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2);
 
     // Shift target rightward so the building stays centered in the viewport
     // area left of the info panel (panelWidthFraction = panel px / viewport px).
@@ -442,8 +466,9 @@ export function createViewer({
     // Walk mode dùng giới hạn rộng hơn để máy yếu (~20fps) không bị đi chậm
     // lại; vật lý tự chia bước con nên vẫn không xuyên tường.
     const walkHasCamera =
-      walkSession?.update(Math.min(rawDeltaTime, MAX_WALK_FRAME_DELTA_SECONDS)) ??
-      false;
+      walkSession?.update(
+        Math.min(rawDeltaTime, MAX_WALK_FRAME_DELTA_SECONDS),
+      ) ?? false;
     if (walkHasCamera) {
       // Walk mode tự đặt vị trí + hướng camera.
     } else if (camAnim) {
@@ -763,6 +788,7 @@ export function createViewer({
     zoomIn,
     zoomOut,
     setLabels,
+    showDebugGuides,
     focusOnPoint,
     enterWalkMode,
     exitWalkMode,

@@ -106,13 +106,12 @@
 
       <!-- Explorer view overlay (shown after entering explorer mode) -->
       <div class="explorer-overlay" id="explorer-overlay" aria-hidden="true">
-        <!-- Building labels — dynamically generated in main.ts -->
-
-        <!-- Explorer click hint (bottom-left area) -->
-        <div class="explorer-hint" id="explorer-hint">
-          <img src="/assets/start_hint.png" alt="" width="38" height="48" />
-          <span>Nhấn tại một điểm<br />để khám phá</span>
+        <!-- Bottom zone menu — buttons generated in main.ts -->
+        <div class="zone-bar">
+          <p class="zone-bar__hint">Giữ chuột trái để xoay · Giữ chuột phải để pan · Scroll để phóng to/nhỏ</p>
+          <nav class="zone-bar__menu" id="zone-menu" aria-label="Các khu trong khuôn viên"></nav>
         </div>
+
 
         <!-- Right-side zoom + tool controls -->
         <div class="zoom-controls">

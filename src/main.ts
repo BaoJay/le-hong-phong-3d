@@ -48,7 +48,6 @@ app.style.setProperty("--bg-glow", viewerConfig.scene.background.glow);
 // ── View state ────────────────────────────────────────────────────────────────
 const startHintBtn    = document.getElementById("start-hint-btn");
 const navKienTruc     = document.getElementById("nav-kien-truc");
-const explorerHint    = document.getElementById("explorer-hint");
 const zoomInBtn       = document.getElementById("zoom-in-btn");
 const zoomOutBtn      = document.getElementById("zoom-out-btn");
 const toggleRotateBtn = document.getElementById("toggle-rotate-btn");
@@ -61,6 +60,10 @@ function enterExplorerView() {
   if (startHintBtn) startHintBtn.style.display = "none";
 }
 
+const DEBUG = new URLSearchParams(location.search).has("debug");
+// Info panel (src/ui/info-panel.ts) đang tạm ẩn; code panel giữ nguyên để mở lại sau.
+const ENABLE_BUILDING_CLICK_PANEL = false as boolean;
+
 // ── Info panel ────────────────────────────────────────────────────────────────
 const panel = createInfoPanel({
   // onClose is a notification: the panel has already closed, reset the camera.
@@ -70,7 +73,6 @@ const panel = createInfoPanel({
 
 function selectBuilding(building: (typeof BUILDINGS)[number]) {
   enterExplorerView();
-  if (explorerHint) explorerHint.style.display = "none";
   const panelW = Math.min(680, window.innerWidth * 0.9);
   viewer.focusOnPoint(building.center, panelW / window.innerWidth);
   panel.open(building, BUILDINGS);
@@ -100,6 +102,11 @@ const viewer = createViewer({
   config: viewerConfig,
 
   onObjectClick(point) {
+    if (DEBUG) console.info("[debug] click:", `[${point.map((n) => Math.round(n)).join(", ")}]`);
+    enterExplorerView();
+    // TẠM TẮT: click model → chọn khu gần nhất + mở info panel. Bật lại: đổi thành true.
+    // Hiện chỉ dùng menu bar phía dưới để bay camera tới từng khu.
+    if (!ENABLE_BUILDING_CLICK_PANEL) return;
     let nearest = BUILDINGS[0];
     let minDist = Infinity;
     for (const b of BUILDINGS) {
@@ -280,30 +287,39 @@ walkBtn?.addEventListener("click", (event) => {
   void startWalkMode();
 });
 
-// ── 3D label tracking ─────────────────────────────────────────────────────────
-const explorerOverlay = requireElement("explorer-overlay");
+// ── Bottom zone menu: fly the camera only, no info panel ─────────────────────
+const zoneMenu = requireElement("zone-menu");
 
-const labelDefs = BUILDINGS.map((building) => {
-  const el = document.createElement("div");
-  el.className = `blabel blabel--${building.id}`;
-  el.id = building.labelId;
-  el.style.cursor = "pointer";
-  el.style.pointerEvents = "auto";
+for (const building of BUILDINGS) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "zone-bar__item";
+  btn.textContent = building.label;
+  btn.setAttribute("aria-pressed", "false");
+  btn.addEventListener("click", () => {
+    if (panel.isOpen) panel.close();
+    zoneMenu.querySelector("[aria-pressed='true']")?.setAttribute("aria-pressed", "false");
+    btn.setAttribute("aria-pressed", "true");
+    viewer.focusOnPoint(building.center, 0, true);
+  });
+  zoneMenu.appendChild(btn);
+}
 
-  el.innerHTML = `
-    <div class="blabel-inner">
-      <span class="blabel-text">${building.label}</span>
-      <div class="blabel-line"></div>
-    </div>
-  `;
-
-  el.addEventListener("click", () => selectBuilding(building));
-  explorerOverlay.appendChild(el);
-
-  return { el, pos: building.labelPos, building };
-});
-
-viewer.setLabels(labelDefs.map(({ el, pos }) => ({ el, pos })));
+// ── Debug: show each building's center point (open with ?debug) ──────────────
+if (DEBUG) {
+  const overlay = requireElement("explorer-overlay");
+  viewer.setLabels(
+    BUILDINGS.map((b) => {
+      const el = document.createElement("div");
+      el.style.cssText =
+        "position:fixed;transform:translate(-5px,-5px);font:11px monospace;color:#c00;white-space:nowrap;pointer-events:none;z-index:3";
+      el.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e00;border:2px solid #fff;vertical-align:middle"></span> ${b.label} [${b.center.join(", ")}]`;
+      overlay.appendChild(el);
+      return { el, pos: b.center };
+    }),
+  );
+  viewer.showDebugGuides(BUILDINGS.map((b) => b.center));
+}
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 void viewer.load().catch(() => {
