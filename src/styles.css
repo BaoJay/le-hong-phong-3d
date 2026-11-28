@@ -417,125 +417,61 @@ button {
   visibility: visible;
 }
 
-/* ─── Building labels — JS sets left/top to the 3D projected anchor ─────── */
-.blabel {
-  position: fixed;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.blabel-text {
-  font-size: 0.8rem;
-  color: #2a2a2a;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
-  white-space: nowrap;
-  background: beige;
-  padding: 0.2rem 0.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-}
-
-/*
-  Each .blabel-inner offsets itself so the correct corner = anchor (left/top).
-  Khu A  → anchor at bottom-right  → translate(-100%, -100%)
-  Khu B top → anchor at bottom-center → translate(-50%, -100%)
-  Khu E  → anchor at bottom-left   → translate(0,    -100%)
-  Khu B bottom → anchor at top-left → translate(0,      0)
-*/
-
-.blabel-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translate(-50%, -100%);
-}
-.blabel-line {
-  width: 1px;
-  height: 100px;
-  background: beige;
-  margin-left: 2px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Khu A — text top-left, L opens lower-right, anchor at bottom-right */
-/* .blabel--a .blabel-inner {
-  transform: translate(-100%, -100%);
-} */
-/* .blabel--a .blabel-line {
-  width: 170px;
-  height: 100px;
-  border-left: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-} */
-
-/* Khu B — text above, vertical stem down, anchor at bottom */
-/* .blabel--b .blabel-inner {
-  transform: translate(-50%, -100%);
-} */
-/* .blabel--b .blabel-line {
-  width: 1px;
-  height: 100px;
-  background: beige;
-  margin-left: 2px;
-} */
-
-/* Khu C — text top-right, L opens lower-left, anchor at bottom-left */
-/* .blabel--c .blabel-inner {
-  transform: translate(0, -100%);
-} */
-/* .blabel--c .blabel-line {
-  width: 90px;
-  height: 100px;
-  border-right: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-  margin-right: 2px;
-} */
-
-/* Khu D — anchor at top-left, L opens lower-right, text beside bottom */
-/* .blabel--d .blabel-inner {
-  transform: translate(0, 0);
-} */
-/* .blabel--d .blabel-line {
-  width: 120px;
-  height: 100px;
-  border-left: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-} */
-.blabel--d .blabel-text {
-  margin-left: 0.4rem;
-  padding-bottom: 1px;
-}
-
-/* Khu Nhà thi đấu — anchor at top-left, L opens lower-right, text beside bottom */
-/* .blabel--nha-thi-dau .blabel-inner {
-  transform: translate(0, 0);
-} */
-/* .blabel--nha-thi-dau .blabel-line {
-  width: 120px;
-  height: 100px;
-  border-left: 1px solid rgba(0, 0, 0, 0.28);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
-} */
-.blabel--nha-thi-dau .blabel-text {
-  margin-left: 0.4rem;
-  padding-bottom: 1px;
-}
-
-/* ─── Explorer hint ──────────────────────────────────────────────────────── */
-.explorer-hint {
+/* ─── Bottom zone menu (centered, Pocket-style) ──────────────────────────── */
+.zone-bar {
   position: absolute;
-  bottom: 10%;
-  left: 24%;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 2rem);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-  text-align: center;
+  gap: 0.6rem;
+}
+.zone-bar__hint {
   font-size: 0.78rem;
   color: #555;
-  line-height: 1.5;
   letter-spacing: 0.02em;
+  text-align: center;
+}
+.zone-bar__menu {
+  display: flex;
+  gap: 0.25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: rgba(245, 245, 245, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+}
+.zone-bar__item {
+  flex-shrink: 0;
+  white-space: nowrap;
+  border: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+  color: #2a2a2a;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 300ms ease,
+    box-shadow 300ms ease;
+}
+.zone-bar__item:hover,
+.zone-bar__item[aria-pressed="true"] {
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+.zone-bar__item:focus-visible {
+  outline: 2px solid #2a2a2a;
+  outline-offset: 2px;
 }
 
 /* ─── Zoom controls ──────────────────────────────────────────────────────── */

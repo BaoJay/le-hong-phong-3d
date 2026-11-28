@@ -18,6 +18,7 @@ export interface ViewerApi {
   zoomIn(): void;
   zoomOut(): void;
   setLabels(defs: { el: HTMLElement; pos: [number, number, number] }[]): void;
+  showDebugGuides(points: [number, number, number][]): void;
   focusOnPoint(center: [number, number, number], panelWidthFraction?: number): void;
   /**
    * Bay camera xuống tầm mắt và bật điều khiển góc nhìn thứ nhất. Trả `true`
