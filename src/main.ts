@@ -61,6 +61,8 @@ function enterExplorerView() {
 }
 
 const DEBUG = new URLSearchParams(location.search).has("debug");
+// Info panel (src/ui/info-panel.ts) đang tạm ẩn; code panel giữ nguyên để mở lại sau.
+const ENABLE_BUILDING_CLICK_PANEL = false as boolean;
 
 // ── Info panel ────────────────────────────────────────────────────────────────
 const panel = createInfoPanel({
@@ -101,6 +103,10 @@ const viewer = createViewer({
 
   onObjectClick(point) {
     if (DEBUG) console.info("[debug] click:", `[${point.map((n) => Math.round(n)).join(", ")}]`);
+    enterExplorerView();
+    // TẠM TẮT: click model → chọn khu gần nhất + mở info panel. Bật lại: đổi thành true.
+    // Hiện chỉ dùng menu bar phía dưới để bay camera tới từng khu.
+    if (!ENABLE_BUILDING_CLICK_PANEL) return;
     let nearest = BUILDINGS[0];
     let minDist = Infinity;
     for (const b of BUILDINGS) {
@@ -294,7 +300,7 @@ for (const building of BUILDINGS) {
     if (panel.isOpen) panel.close();
     zoneMenu.querySelector("[aria-pressed='true']")?.setAttribute("aria-pressed", "false");
     btn.setAttribute("aria-pressed", "true");
-    viewer.focusOnPoint(building.center);
+    viewer.focusOnPoint(building.center, 0, true);
   });
   zoneMenu.appendChild(btn);
 }

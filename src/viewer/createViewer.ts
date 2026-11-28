@@ -300,16 +300,16 @@ export function createViewer({
   function focusOnPoint(
     centerArr: [number, number, number],
     panelWidthFraction = 0,
+    zoomMax = false,
   ) {
     const target = new Vector3(...centerArr);
     // Use the animation destination if mid-flight, so direction/distance are consistent.
     const refPos = camAnim ? camAnim.endPos : camera.position;
     const refTarget = camAnim ? camAnim.endTarget : controls.target;
     const dir = new Vector3().subVectors(refPos, refTarget).normalize();
-    const newDist = Math.max(
-      refPos.distanceTo(refTarget) * 0.38,
-      controls.minDistance * 2,
-    );
+    const newDist = zoomMax
+      ? controls.minDistance
+      : Math.max(refPos.distanceTo(refTarget) * 0.38, controls.minDistance * 2);
 
     // Shift target rightward so the building stays centered in the viewport
     // area left of the info panel (panelWidthFraction = panel px / viewport px).
